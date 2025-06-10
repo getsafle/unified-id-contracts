@@ -1,6 +1,5 @@
-//child contract
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -14,17 +13,16 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bool exists;
     }
     struct Registrar {
-        bool isRegisteredRegistrar;
+        bool isRegistered;
         string registrarName;
         address registrarAddress;
     }
 
-    uint256 public maxNameUpdates;
     bool public isPaused;
     uint256 public totalUnifiedIdRegistered;
     RegistrarStorageUtil public util;
     mapping(address => bool) public authorizedRelayers;
-    mapping(address => bool) public isRegisteredRegistrar;
+    mapping(address => bool) public isRegistrarAlreadyRegistered;
     mapping(address => string) public registrarNames;
     mapping(string => address) public registrarNameToAddress;
     mapping(address => uint8) public totalRegistrarUpdates;
@@ -51,7 +49,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     event PublicRegistrarRegistrationToggled(bool enabled);
     event EmergencyModeToggled(bool enabled);
     event AdminUserUpdated(address user, bool isAdmin);
-    event MaxNameUpdatesChanged(uint256 oldMax, uint256 newMax);
     event UnifiedIdLengthLimitsUpdated(uint256 minLength, uint256 maxLength);
 
     event SecondaryAddressAdded(string unifiedId, address secondary);
@@ -110,7 +107,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
     modifier onlyRegistrar() {
-        require(isRegisteredRegistrar[msg.sender], "Caller not a registrar");
+        require(isRegistrarAlreadyRegistered[msg.sender], "Caller not a registrar");
         _;
     }
     modifier onlyAuthorizedRelayer() {
@@ -139,7 +136,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function initialize(address _RegistrarStorageUtil) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        maxNameUpdates = 3;
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
         
         // === ADMIN DEFAULTS ===
@@ -166,25 +162,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         require(!isAddressTaken[_registrarAddress], "This address is already registered.");
         registrarNameToAddress[_registrarName] = _registrarAddress;
         registrarNames[_registrarAddress] = _registrarName;
-        isRegisteredRegistrar[_registrarAddress] = true;
+        isRegistrarAlreadyRegistered[_registrarAddress] = true;
         isAddressTaken[_registrarAddress] = true;
         registrarAddresses.push(_registrarAddress);
         emit RegistrarRegistered(_registrarAddress, _registrarName);
-        return true;
-    }
-
-    function updateRegistrar(
-        address _registrar,
-        string calldata _newRegistrarName
-    ) external whenNotPaused validateRegistrarName(_newRegistrarName) onlyOwner returns (bool) {
-        require(isAddressTaken[_registrar], "Registrar should register first.");
-        require(totalRegistrarUpdates[_registrar] + 1 <= maxNameUpdates, "Maximum update count reached.");
-        string memory oldName = registrarNames[_registrar];
-        registrarNameToAddress[oldName] = address(0x0);
-        registrarNames[_registrar] = _newRegistrarName;
-        registrarNameToAddress[_newRegistrarName] = _registrar;
-        totalRegistrarUpdates[_registrar]++;
-        emit RegistrarUpdated(_registrar, oldName, _newRegistrarName);
         return true;
     }
 
@@ -205,7 +186,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _primarySignature,
         bytes calldata _options
     ) external payable whenNotPaused onlyRegistrar returns (bool) {
-        require(util.isSafleIdValid(_unifiedId), "Invalid UnifiedId format");
+        require(util.isUnifiedIdValid(_unifiedId), "Invalid UnifiedId format");
         require(!userAddresses[_unifiedId].exists, "UnifiedID already exists");
         require(!unavailableUnifiedIds[_unifiedId], "UnifiedID not available");
         require(registrarNameToAddress[_unifiedId] == address(0x0), "This UnifiedId is taken by a Registrar.");
@@ -245,7 +226,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         onlyRegistrar
         returns (bool)
     {
-        require(util.isSafleIdValid(_newUnifiedId), "Invalid new UnifiedId format");
+        require(util.isUnifiedIdValid(_newUnifiedId), "Invalid new UnifiedId format");
         emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, _signature, _options);
         return true;
     }
@@ -417,15 +398,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     }
     
     /**
-     * @notice Enable/disable public registrar registration
+     * @notice Enable/disable registrar registration
      * @param _enabled True to enable public registration, false to restrict to admin only
      */
-    function setPublicRegistrarRegistration(bool _enabled) external onlyOwner {
+    function setRegistrarRegistrationPermission(bool _enabled) external onlyOwner {
         publicRegistrarRegistration = _enabled;
         emit PublicRegistrarRegistrationToggled(_enabled);
     }
-    
-
     
     /**
      * @notice Toggle emergency mode - stops all operations except admin functions
@@ -446,17 +425,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         adminUsers[_user] = _isAdmin;
         emit AdminUserUpdated(_user, _isAdmin);
     }
-    
-    /**
-     * @notice Set maximum name updates allowed per registrar
-     * @param _maxNameUpdates New maximum limit
-     */
-    function setMaxNameUpdates(uint256 _maxNameUpdates) external onlyOwner {
-        require(_maxNameUpdates > 0, "Max name updates must be greater than 0");
-        uint256 oldMax = maxNameUpdates;
-        maxNameUpdates = _maxNameUpdates;
-        emit MaxNameUpdatesChanged(oldMax, _maxNameUpdates);
-    }
+
     
     /**
      * @notice Set unified ID length limits
@@ -491,10 +460,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
      * @param _registrarAddress Address of registrar to remove
      */
     function emergencyRemoveRegistrar(address _registrarAddress) external onlyAdmin {
-        require(isRegisteredRegistrar[_registrarAddress], "Address is not a registrar");
+        require(isRegistrarAlreadyRegistered[_registrarAddress], "Address is not a registrar");
         string memory registrarName = registrarNames[_registrarAddress];
-        
-        isRegisteredRegistrar[_registrarAddress] = false;
+
+        isRegistrarAlreadyRegistered[_registrarAddress] = false;
         isAddressTaken[_registrarAddress] = false;
         registrarNameToAddress[registrarName] = address(0);
         delete registrarNames[_registrarAddress];
@@ -519,7 +488,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         uint256 _maxSecondaryAddresses,
         bool _publicRegistrarRegistration,
         bool _emergencyMode,
-        uint256 _maxNameUpdates,
         uint256 _minUnifiedIdLength,
         uint256 _maxUnifiedIdLength
     ) {
@@ -527,7 +495,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
             maxSecondaryAddresses,
             publicRegistrarRegistration,
             emergencyMode,
-            maxNameUpdates,
             minUnifiedIdLength,
             maxUnifiedIdLength
         );
@@ -585,7 +552,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         uint8 updateCount
     ) {
         return (
-            isRegisteredRegistrar[_address],
+            isRegistrarAlreadyRegistered[_address],
             registrarNames[_address],
             totalRegistrarUpdates[_address]
         );

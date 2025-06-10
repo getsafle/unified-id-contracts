@@ -11,12 +11,12 @@ contract RegistrarStorageUtil {
     string constant PREFIX = "\x19Ethereum Signed Message:\n32";
     
     // === ADMIN CONFIGURATION VARIABLES ===
-    uint8 public maxSafleIdLength;
-    uint8 public minSafleIdLength;
+    uint8 public maxUnifiedIdLength;
+    uint8 public minUnifiedIdLength;
     mapping(address => bool) public adminUsers;
     
     // === ADMIN EVENTS ===
-    event SafleIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
+    event UnifiedIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
     event AdminUserUpdated(address user, bool isAdmin);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     
@@ -28,8 +28,8 @@ contract RegistrarStorageUtil {
     constructor() {
         owner = msg.sender;
         adminUsers[msg.sender] = true;
-        maxSafleIdLength = 16;
-        minSafleIdLength = 4;
+        maxUnifiedIdLength = 16;
+        minUnifiedIdLength = 4;
     }
 
     modifier onlyOwner() {
@@ -151,8 +151,8 @@ contract RegistrarStorageUtil {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
-        uint8 constant MAX_SAFLE_ID_LENGTH = 16;
-    uint8 constant MIN_SAFLE_ID_LENGTH = 4;
+        uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
+    uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
     /**
     * @dev  check if address is of wallet or contract 
@@ -201,11 +201,11 @@ contract RegistrarStorageUtil {
 
     /**
     * @dev  to check if string contains alphanumeric or ASCII characters
-    * @param safleId string to be checked
+    * @param unifiedId string to be checked
     */
 
-    function checkAlphaNumericAndAscii(string memory safleId) public pure returns (bool) {
-        bytes memory b = bytes(safleId);
+    function checkAlphaNumericAndAscii(string memory unifiedId) public pure returns (bool) {
+        bytes memory b = bytes(unifiedId);
         
         for(uint i; i < b.length; i++) {
             bytes1 char = b[i];
@@ -223,26 +223,26 @@ contract RegistrarStorageUtil {
         return true;
     }   
     
-    function isSafleIdValid(string memory _registrarName) public view returns (bool) {
+    function unifiedIdValid(string memory _registrarName) public view returns (bool) {
         string memory nameInLowerCase = toLower(_registrarName);
         uint8 length = checkLength(_registrarName);
         require(checkAlphaNumericAndAscii(nameInLowerCase), "only alphanumeric allowed");
-        require(length <= maxSafleIdLength && length >= minSafleIdLength, "SafleId length out of bounds");
+        require(length <= maxUnifiedIdLength && length >= minUnifiedIdLength, "Unified Id length out of bounds");
         return true;
     }
 
     // === ADMIN FUNCTIONS ===
     
     /**
-     * @notice Set SafleId length limits
-     * @param _minLength Minimum length for SafleIds
-     * @param _maxLength Maximum length for SafleIds
+     * @notice Set UnifiedId length limits
+     * @param _minLength Minimum length for unifiedId
+     * @param _maxLength Maximum length for unifiedId
      */
-    function setSafleIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyOwner {
+    function setUnifiedIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyOwner {
         require(_minLength > 0 && _maxLength > _minLength, "Invalid length limits");
-        minSafleIdLength = _minLength;
-        maxSafleIdLength = _maxLength;
-        emit SafleIdLengthLimitsUpdated(_minLength, _maxLength);
+        minUnifiedIdLength = _minLength;
+        maxUnifiedIdLength = _maxLength;
+        emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
     }
     
     /**
@@ -272,22 +272,14 @@ contract RegistrarStorageUtil {
      * @return Configuration values
      */
     function getConfiguration() external view returns (
-        uint8 _minSafleIdLength,
-        uint8 _maxSafleIdLength,
+        uint8 _minUnifiedIdLength,
+        uint8 _maxUnifiedIdIdLength,
         address _owner
     ) {
         return (
-            minSafleIdLength,
-            maxSafleIdLength,
+            minUnifiedIdLength,
+            maxUnifiedIdLength,
             owner
         );
-    }
-
-    function getAllRegistrars() external view returns (address[] memory) {
-        // Implementation of getAllRegistrars function
-    }
-
-    function getAllRegistrarsWithNames() external view returns (address[] memory addresses, string[] memory names) {
-        // Implementation of getAllRegistrarsWithNames function
     }
 }
