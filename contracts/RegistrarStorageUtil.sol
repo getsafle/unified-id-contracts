@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -9,22 +9,22 @@ contract RegistrarStorageUtil {
     address public ethPriceFeed;
     address public owner;
     string constant PREFIX = "\x19Ethereum Signed Message:\n32";
-    
+
     // === ADMIN CONFIGURATION VARIABLES ===
     uint8 public maxUnifiedIdLength;
     uint8 public minUnifiedIdLength;
     mapping(address => bool) public adminUsers;
-    
+
     // === ADMIN EVENTS ===
     event UnifiedIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
     event AdminUserUpdated(address user, bool isAdmin);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    
+
     // Events
     event TokenPriceFeedSet(address indexed token, address indexed priceFeed);
     event EthPriceFeedSet(address indexed priceFeed);
-    
- 
+
+
     constructor() {
         owner = msg.sender;
         adminUsers[msg.sender] = true;
@@ -36,7 +36,7 @@ contract RegistrarStorageUtil {
         require(msg.sender == owner, "Caller is not the owner");
         _;
     }
-    
+
     modifier onlyAdmin() {
         require(adminUsers[msg.sender] || msg.sender == owner, "Caller not admin or owner");
         _;
@@ -65,7 +65,7 @@ contract RegistrarStorageUtil {
             result[1] = tokenInfo[1]; // decimals
             result[2] = tokenInfo[2]; // ethPriceInUSD
             result[3] = tokenInfo[3]; // ethDecimals
-            
+
             uint256 decimalAdjustment = 0;
             if (tokenInfo[1] != tokenInfo[3]) {
                 if (tokenInfo[1] > tokenInfo[3]) {
@@ -78,7 +78,7 @@ contract RegistrarStorageUtil {
             } else {
                 result[4] = (registrarFees * tokenInfo[2]) / tokenInfo[0];
             }
-            
+
             return result[4] / 10 ** tokenDecimal[token];
         }
     }
@@ -95,7 +95,7 @@ contract RegistrarStorageUtil {
         require(answer > 0, "Invalid token price");
         uint256 tokenPriceInUSD = uint256(answer);
         uint8 decimals = priceFeed.decimals();
-        
+
         AggregatorV3Interface ethPriceAggregator = AggregatorV3Interface(ethPriceFeed);
         (
             ,
@@ -106,13 +106,13 @@ contract RegistrarStorageUtil {
         require(ethAnswer > 0, "Invalid ETH price");
         uint256 ethPriceInUSD = uint256(ethAnswer);
         uint8 ethDecimals = ethPriceAggregator.decimals();
-        
+
         uint256[] memory result = new uint256[](4);
         result[0] = tokenPriceInUSD;
         result[1] = decimals;
         result[2] = ethPriceInUSD;
         result[3] = ethDecimals;
-        
+
         return result;
     }
 
@@ -151,14 +151,14 @@ contract RegistrarStorageUtil {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
-        uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
+    uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
     uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
     /**
-    * @dev  check if address is of wallet or contract 
+    * @dev  check if address is of wallet or contract
     * @param _resolverAddress address to check
     */
-    function isContract(address _resolverAddress) 
+    function isContract(address _resolverAddress)
     public view
     returns(bool)
     {
@@ -168,9 +168,9 @@ contract RegistrarStorageUtil {
         }
         return (size > 0);
     }
-    
+
     /**
-    * @dev  convert a string to lower case 
+    * @dev  convert a string to lower case
     * @param str string to be converted
     */
 
@@ -188,10 +188,10 @@ contract RegistrarStorageUtil {
         }
         return string(bLower);
     }
-    
+
 
     /**
-    * @dev  to check length of a string 
+    * @dev  to check length of a string
     * @param _name string length to be check
     */
     function checkLength(string memory _name) public pure returns (uint8){
@@ -206,10 +206,10 @@ contract RegistrarStorageUtil {
 
     function checkAlphaNumericAndAscii(string memory unifiedId) public pure returns (bool) {
         bytes memory b = bytes(unifiedId);
-        
+
         for(uint i; i < b.length; i++) {
             bytes1 char = b[i];
-            
+
             if(!(
                 (char >= 0x30 && char <= 0x39) || // 0-9
                 (char >= 0x61 && char <= 0x7A) || // a-z
@@ -219,10 +219,10 @@ contract RegistrarStorageUtil {
                 return false;
             }
         }
-        
+
         return true;
-    }   
-    
+    }
+
     function unifiedIdValid(string memory _registrarName) public view returns (bool) {
         string memory nameInLowerCase = toLower(_registrarName);
         uint8 length = checkLength(_registrarName);
@@ -231,8 +231,17 @@ contract RegistrarStorageUtil {
         return true;
     }
 
+    /**
+     * @notice Check if unified ID is valid (alias for backward compatibility)
+     * @param _unifiedId unified ID to validate
+     * @return True if valid
+     */
+    function isUnifiedIdValid(string memory _unifiedId) public view returns (bool) {
+        return unifiedIdValid(_unifiedId);
+    }
+
     // === ADMIN FUNCTIONS ===
-    
+
     /**
      * @notice Set UnifiedId length limits
      * @param _minLength Minimum length for unifiedId
@@ -244,7 +253,7 @@ contract RegistrarStorageUtil {
         maxUnifiedIdLength = _maxLength;
         emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
     }
-    
+
     /**
      * @notice Add or remove admin user
      * @param _user Address to modify admin status
@@ -255,7 +264,7 @@ contract RegistrarStorageUtil {
         adminUsers[_user] = _isAdmin;
         emit AdminUserUpdated(_user, _isAdmin);
     }
-    
+
     /**
      * @notice Transfer ownership of the contract
      * @param _newOwner Address of the new owner
@@ -266,11 +275,8 @@ contract RegistrarStorageUtil {
         owner = _newOwner;
         adminUsers[_newOwner] = true;
     }
-    
-    /**
-     * @notice Get configuration parameters
-     * @return Configuration values
-     */
+
+
     function getConfiguration() external view returns (
         uint8 _minUnifiedIdLength,
         uint8 _maxUnifiedIdIdLength,

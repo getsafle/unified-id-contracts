@@ -2,12 +2,14 @@
 pragma solidity ^0.8.25;
 
 import "./RegistrarStorageUtil.sol";
+import "./IUnifiedIdResolver.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, PausableUpgradeable {
     RegistrarStorageUtil public util;
+    IUnifiedIdResolver public resolver;
     mapping(address => bool) public authorizedRelayers;
 
     struct ChainData {
@@ -49,22 +51,19 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     event SecondaryAddressRemoved(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
     event RelayerAuthorizationUpdated(address indexed relayer, bool authorized);
 
-    modifier whenNotPaused() {
-        require(!paused(), "Contract is paused");
-        _;
-    }
+
 
     // === ADMIN MODIFIERS ===
     modifier onlyAdmin() {
         require(adminUsers[msg.sender] || msg.sender == owner(), "Caller not admin or owner");
         _;
     }
-    
+
     modifier notInEmergencyMode() {
         require(!emergencyMode, "Contract in emergency mode");
         _;
     }
-    
+
 
 
     modifier verifySignature(bytes memory data, address expectedSigner, bytes memory signature) {
@@ -75,12 +74,13 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         _;
     }
 
-    function initialize(address _util) public initializer {
+    function initialize(address _util, address _resolver) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __Pausable_init();
         util = RegistrarStorageUtil(_util);
-        
+        resolver = IUnifiedIdResolver(_resolver);
+
         // === ADMIN DEFAULTS ===
         maxSecondaryAddressesPerChain = 10;
         maxChainsPerUnifiedId = 50;
@@ -92,11 +92,9 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         require(authorizedRelayers[msg.sender], "Caller not authorized relayer");
         _;
     }
-
     function pause() external onlyOwner {
         _pause();
     }
-
     function unpause() external onlyOwner {
         _unpause();
     }
@@ -104,6 +102,10 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     function setAuthorizedRelayer(address relayer, bool authorized) external onlyOwner {
         authorizedRelayers[relayer] = authorized;
         emit RelayerAuthorizationUpdated(relayer, authorized);
+    }
+
+    function setResolver(address _resolver) external onlyOwner {
+        resolver = IUnifiedIdResolver(_resolver);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -136,6 +138,9 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         chainData.exists = true;
         uid.registeredChainIds.push(chainId);
 
+        // Update resolver with primary address mapping
+        resolver.setUnifiedIdPrimaryAddress(unifiedId, chainId, primary);
+
         emit UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary);
         nonces[unifiedId]++;
     }
@@ -157,6 +162,9 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         requireSignature(data, newPrimary, newPrimarySignature);
 
         unifiedIds[unifiedId].chains[chainId].primary = newPrimary;
+
+        // Update resolver with new primary address mapping
+        resolver.updateUnifiedIdPrimaryAddress(unifiedId, chainId, newPrimary);
 
         emit PrimaryAddressUpdated(unifiedId, chainId, newPrimary);
         nonces[unifiedId]++;
@@ -180,8 +188,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
 
         ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
         require(chainData.secondaries.length < maxSecondaryAddressesPerChain, "Maximum secondary addresses per chain reached");
-        
+
         chainData.secondaries.push(secondary);
+
+        // Update resolver with secondary address mapping
+        resolver.addUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
         emit SecondaryAddressAdded(unifiedId, chainId, secondary);
         nonces[unifiedId]++;
@@ -194,10 +205,10 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         bytes memory data,
         bytes memory signature
     )
-        external
-        onlyRelayer
-        whenNotPaused
-        verifySignature(data, unifiedIds[unifiedId].chains[chainId].primary, signature)
+    external
+    onlyRelayer
+    whenNotPaused
+    verifySignature(data, unifiedIds[unifiedId].chains[chainId].primary, signature)
     {
         require(unifiedIds[unifiedId].exists, "UnifiedID does not exist");
         require(unifiedIds[unifiedId].chains[chainId].exists, "Chain data does not exist");
@@ -208,6 +219,10 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
             if (chainData.secondaries[i] == secondary) {
                 chainData.secondaries[i] = chainData.secondaries[chainData.secondaries.length - 1];
                 chainData.secondaries.pop();
+
+                // Update resolver to remove secondary address mapping
+                resolver.removeUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
+
                 emit SecondaryAddressRemoved(unifiedId, chainId, secondary);
                 nonces[unifiedId]++;
                 break;
@@ -226,6 +241,14 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         require(unifiedIds[oldUnifiedId].exists, "Old UnifiedID does not exist");
         require(!unifiedIds[newUnifiedId].exists, "New UnifiedID already exists");
 
+        _transferUnifiedIdData(oldUnifiedId, newUnifiedId);
+        _cleanupOldUnifiedId(oldUnifiedId, newUnifiedId);
+    }
+
+    /**
+     * @dev Internal function to transfer unified ID data to avoid stack too deep
+     */
+    function _transferUnifiedIdData(string memory oldUnifiedId, string memory newUnifiedId) internal {
         UnifiedID storage existing = unifiedIds[oldUnifiedId];
         uint256[] memory chainIds = existing.registeredChainIds;
 
@@ -238,11 +261,37 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
             uint256 cid = chainIds[i];
             updated.chains[cid] = existing.chains[cid];
             updated.registeredChainIds.push(cid);
-        }
 
-        // Clean up existing data
+            _updateResolverForNewUnifiedId(newUnifiedId, cid, existing.chains[cid]);
+        }
+    }
+
+    /**
+     * @dev Internal function to update resolver mappings for new unified ID
+     */
+    function _updateResolverForNewUnifiedId(string memory newUnifiedId, uint256 chainId, ChainData storage chainData) internal {
+        if (chainData.primary != address(0)) {
+            resolver.setUnifiedIdPrimaryAddress(newUnifiedId, chainId, chainData.primary);
+
+            // Add secondary addresses to resolver
+            address[] storage secondaries = chainData.secondaries;
+            for (uint j = 0; j < secondaries.length; j++) {
+                resolver.addUnifiedIdSecondaryAddress(newUnifiedId, chainId, secondaries[j]);
+            }
+        }
+    }
+
+    /**
+     * @dev Internal function to cleanup old unified ID data
+     */
+    function _cleanupOldUnifiedId(string memory oldUnifiedId, string memory newUnifiedId) internal {
+        UnifiedID storage existing = unifiedIds[oldUnifiedId];
+        uint256[] memory chainIds = existing.registeredChainIds;
+
+        // Clean up resolver mappings for old unified ID
         for (uint i = 0; i < chainIds.length; i++) {
             uint256 cid = chainIds[i];
+            resolver.clearUnifiedIdMappings(oldUnifiedId, cid);
             delete existing.chains[cid];
         }
 
@@ -303,6 +352,40 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         return unifiedIds[unifiedId].registeredChainIds;
     }
 
+    // === RESOLVER INTEGRATION FUNCTIONS ===
+
+    /**
+     * @notice Get unified ID from address via resolver
+     * @param addr Address to lookup
+     * @param chainId Chain ID where the address is registered
+     * @return Unified ID associated with the address
+     */
+    function resolveAddressToUnifiedId(address addr, uint256 chainId) external view returns (string memory) {
+        return resolver.getUnifiedIdFromAddress(addr, chainId);
+    }
+
+    /**
+     * @notice Get primary address for unified ID on specific chain via resolver
+     * @param unifiedId Unified ID to lookup
+     * @param chainId Chain ID to query
+     * @return Primary address on the specified chain
+     */
+    function resolvePrimaryAddress(string calldata unifiedId, uint256 chainId) external view returns (address) {
+        return resolver.getPrimaryAddress(unifiedId, chainId);
+    }
+
+    /**
+     * @notice Get all addresses for unified ID on specific chain via resolver
+     * @param unifiedId Unified ID to lookup
+     * @param chainId Chain ID to query
+     * @return primary Primary address
+     * @return secondaries Array of secondary addresses
+     */
+    function resolveAllAddresses(string calldata unifiedId, uint256 chainId)
+    external view returns (address primary, address[] memory secondaries) {
+        return resolver.getAddresses(unifiedId, chainId);
+    }
+
     function requireSignature(bytes memory data, address expectedSigner, bytes memory signature) internal view {
         (string memory unifiedId, address addressdec) = abi.decode(data, (string, address));
         uint256 nonce = nonces[unifiedId];
@@ -311,7 +394,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     }
 
     // === ADMIN FUNCTIONS ===
-    
+
     /**
      * @notice Set maximum number of secondary addresses per chain
      * @param _maxSecondaryAddresses New maximum limit
@@ -321,7 +404,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         maxSecondaryAddressesPerChain = _maxSecondaryAddresses;
         emit MaxSecondaryAddressesPerChainUpdated(oldMax, _maxSecondaryAddresses);
     }
-    
+
     /**
      * @notice Set maximum number of chains per unified ID
      * @param _maxChains New maximum limit
@@ -332,7 +415,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         maxChainsPerUnifiedId = _maxChains;
         emit MaxChainsPerUnifiedIdUpdated(oldMax, _maxChains);
     }
-    
+
     /**
      * @notice Toggle emergency mode
      * @param _enabled True to enable emergency mode, false to disable
@@ -341,7 +424,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         emergencyMode = _enabled;
         emit EmergencyModeToggled(_enabled);
     }
-    
+
     /**
      * @notice Add or remove admin user
      * @param _user Address to modify admin status
@@ -352,9 +435,9 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         adminUsers[_user] = _isAdmin;
         emit AdminUserUpdated(_user, _isAdmin);
     }
-    
 
-    
+
+
     /**
      * @notice Emergency function to mark unified ID as unavailable
      * @param _unifiedId Unified ID to mark as unavailable
@@ -362,7 +445,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyAdmin {
         isUnavailableUnifiedId[_unifiedId] = true;
     }
-    
+
     /**
      * @notice Emergency function to mark unified ID as available
      * @param _unifiedId Unified ID to mark as available
@@ -370,7 +453,7 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyAdmin {
         isUnavailableUnifiedId[_unifiedId] = false;
     }
-    
+
     /**
      * @notice Emergency function to clean up chain data
      * @param _unifiedId Unified ID to clean up
@@ -379,9 +462,9 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     function emergencyCleanupChainData(string calldata _unifiedId, uint256 _chainId) external onlyAdmin {
         require(unifiedIds[_unifiedId].exists, "UnifiedID does not exist");
         require(unifiedIds[_unifiedId].chains[_chainId].exists, "Chain data does not exist");
-        
+
         delete unifiedIds[_unifiedId].chains[_chainId];
-        
+
         // Remove from registeredChainIds array
         uint256[] storage chainIds = unifiedIds[_unifiedId].registeredChainIds;
         for (uint i = 0; i < chainIds.length; i++) {
@@ -392,12 +475,14 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
             }
         }
     }
-    
 
-    
+
+
     /**
      * @notice Get contract configuration
-     * @return Configuration parameters
+     * @return _maxSecondaryAddressesPerChain Maximum secondary addresses per chain
+     * @return _maxChainsPerUnifiedId Maximum chains per unified ID
+     * @return _emergencyMode Emergency mode status
      */
     function getConfiguration() external view returns (
         uint256 _maxSecondaryAddressesPerChain,
