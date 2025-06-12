@@ -7,12 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     struct UserData {
         address primary;
         mapping(address => bool) isSecondary;
@@ -214,53 +208,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         return true;
     }
 
-    // Add nonce tracking for replay protection
-    mapping(string => mapping(uint256 => bool)) public usedNonces;
-
     function completeRegisterUnifiedId(
         string calldata _unifiedId,
-        address _primaryAddress,
-        bytes calldata _masterSignature,
-        bytes calldata _primarySignature,
-        uint256 _nonce,
-        uint256 _timestamp
+        address _primaryAddress
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        // 1. Verify timestamp is recent
-        require(block.timestamp <= _timestamp + 1 hours, "Operation expired");
-
-        // 2. Verify nonce hasn't been used
-        require(!usedNonces[_unifiedId][_nonce], "Nonce already used");
-
-        // 3. Construct message that was signed
-        bytes memory message = abi.encode(
-            "REGISTER_UNIFIED_ID",
-            _unifiedId,
-            _primaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
-        );
-
-        // 4. Verify signatures
-        require(
-            util.verifySignature(message, _primaryAddress, _primarySignature),
-            "Invalid primary signature"
-        );
-
-        // 5. If not first registration, verify master signature
-        if (bytes(_masterSignature).length > 0) {
-            // This should get the master address from the Mother contract if available
-            // For now, we'll assume primary is the master for new registrations
-            require(
-                util.verifySignature(message, _primaryAddress, _masterSignature),
-                "Invalid master signature"
-            );
-        }
-
-        // 6. Mark nonce as used
-        usedNonces[_unifiedId][_nonce] = true;
-
-        // 7. Then proceed with registration
         UserData storage userData = userAddresses[_unifiedId];
         userData.primary = _primaryAddress;
         userData.exists = true;
@@ -284,13 +235,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _signature,
         bytes calldata _options
     )
-        external
-        payable
+    external
+    payable
     whenNotPaused
-        unifiedIdExists(_oldUnifiedId)
-        unifiedIdDoesNotExist(_newUnifiedId)
-        onlyRegistrar
-        returns (bool)
+    unifiedIdExists(_oldUnifiedId)
+    unifiedIdDoesNotExist(_newUnifiedId)
+    onlyRegistrar
+    returns (bool)
     {
         require(util.isUnifiedIdValid(_newUnifiedId), "Invalid new UnifiedId format");
         emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, _signature, _options);
@@ -299,45 +250,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function completeUpdateUnifiedId(
         string memory _oldUnifiedId,
-        string memory _newUnifiedId,
-        bytes calldata _signature,
-        uint256 _nonce,
-        uint256 _timestamp
+        string memory _newUnifiedId
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         require(registeredUnifiedIds[_oldUnifiedId], "Old UnifiedID not found");
         require(!registeredUnifiedIds[_newUnifiedId], "New UnifiedID already exists");
 
-        // Get the current primary address
         UserData storage userData = userAddresses[_oldUnifiedId];
-        address currentPrimary = userData.primary;
-
-        // 1. Verify timestamp is recent
-        require(block.timestamp <= _timestamp + 1 hours, "Operation expired");
-
-        // 2. Verify nonce hasn't been used
-        require(!usedNonces[_oldUnifiedId][_nonce], "Nonce already used");
-
-        // 3. Construct message that was signed
-        bytes memory message = abi.encode(
-            "UPDATE_UNIFIED_ID",
-            _oldUnifiedId,
-            _newUnifiedId,
-            chainId,
-            _nonce,
-            _timestamp
-        );
-
-        // 4. Verify signature from current primary address
-        require(
-            util.verifySignature(message, currentPrimary, _signature),
-            "Invalid signature"
-        );
-
-        // 5. Mark nonce as used
-        usedNonces[_oldUnifiedId][_nonce] = true;
-
-        // 6. Proceed with the update using the existing userData and currentPrimary
-        address primaryAddress = currentPrimary;
+        address primaryAddress = userData.primary;
 
         // Update address mappings
         resolveAddressFromUnifiedId[_newUnifiedId] = primaryAddress;
@@ -356,10 +275,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         // Copy secondary addresses
         for (uint i = 0; i < userData.secondaries.length; i++) {
             address secondaryAddr = userData.secondaries[i];
-            
-            // Additional safety check (though source data should already be clean)
-            require(!newUserData.isSecondary[secondaryAddr], "Duplicate secondary address in source data");
-            
             newUserData.isSecondary[secondaryAddr] = true;
             newUserData.secondaries.push(secondaryAddr);
 
@@ -400,44 +315,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function finalizePrimaryAddressChange(
         string calldata _unifiedId,
-        address _newPrimaryAddress,
-        bytes calldata _currentPrimarySignature,
-        bytes calldata _newPrimarySignature,
-        uint256 _nonce,
-        uint256 _timestamp
+        address _newPrimaryAddress
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         address oldPrimary = userData.primary;
-
-        // 1. Verify timestamp is recent
-        require(block.timestamp <= _timestamp + 1 hours, "Operation expired");
-
-        // 2. Verify nonce hasn't been used
-        require(!usedNonces[_unifiedId][_nonce], "Nonce already used");
-
-        // 3. Construct message that was signed
-        bytes memory message = abi.encode(
-            "UPDATE_PRIMARY_ADDRESS",
-            _unifiedId,
-            _newPrimaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
-        );
-
-        // 4. Verify signatures
-        require(
-            util.verifySignature(message, oldPrimary, _currentPrimarySignature),
-            "Invalid current primary signature"
-        );
-        
-        require(
-            util.verifySignature(message, _newPrimaryAddress, _newPrimarySignature),
-            "Invalid new primary signature"
-        );
-
-        // 5. Mark nonce as used
-        usedNonces[_unifiedId][_nonce] = true;
         userData.primary = _newPrimaryAddress;
         resolveAddressFromUnifiedId[_unifiedId] = _newPrimaryAddress;
         resolveUnifiedIdFromAddress[_newPrimaryAddress] = _unifiedId;
@@ -458,11 +339,6 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _options
     ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
-        
-        // Prevent adding primary address as secondary
-        require(userData.primary != _secondaryAddress, "Cannot add primary address as secondary");
-        
-        // Check if already added as secondary
         require(!userData.isSecondary[_secondaryAddress], "Secondary address already added");
         require(userData.secondaries.length < maxSecondaryAddresses, "Maximum secondary addresses limit reached");
         emit AddSecondaryAddressInitiated(
@@ -477,50 +353,9 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function completeAddSecondaryAddress(
         string calldata _unifiedId,
-        address _secondaryAddress,
-        bytes calldata _primarySignature,
-        bytes calldata _secondarySignature,
-        uint256 _nonce,
-        uint256 _timestamp
+        address _secondaryAddress
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
-        
-        // Prevent adding primary address as secondary
-        require(userData.primary != _secondaryAddress, "Cannot add primary address as secondary");
-        
-        // Check if already added as secondary
-        require(!userData.isSecondary[_secondaryAddress], "Secondary address already added");
-
-        // 1. Verify timestamp is recent
-        require(block.timestamp <= _timestamp + 1 hours, "Operation expired");
-
-        // 2. Verify nonce hasn't been used
-        require(!usedNonces[_unifiedId][_nonce], "Nonce already used");
-
-        // 3. Construct message that was signed
-        bytes memory message = abi.encode(
-            "ADD_SECONDARY_ADDRESS",
-            _unifiedId,
-            _secondaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
-        );
-
-        // 4. Verify signatures
-        require(
-            util.verifySignature(message, userData.primary, _primarySignature),
-            "Invalid primary signature"
-        );
-        
-        require(
-            util.verifySignature(message, _secondaryAddress, _secondarySignature),
-            "Invalid secondary signature"
-        );
-
-        // 5. Mark nonce as used
-        usedNonces[_unifiedId][_nonce] = true;
-        
         userData.isSecondary[_secondaryAddress] = true;
         userData.secondaries.push(_secondaryAddress);
 
@@ -543,38 +378,9 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function completeRemoveSecondaryAddress(
         string calldata _unifiedId,
-        address _secondaryAddress,
-        bytes calldata _signature,
-        uint256 _nonce,
-        uint256 _timestamp
+        address _secondaryAddress
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
-
-        // 1. Verify timestamp is recent
-        require(block.timestamp <= _timestamp + 1 hours, "Operation expired");
-
-        // 2. Verify nonce hasn't been used
-        require(!usedNonces[_unifiedId][_nonce], "Nonce already used");
-
-        // 3. Construct message that was signed
-        bytes memory message = abi.encode(
-            "REMOVE_SECONDARY_ADDRESS",
-            _unifiedId,
-            _secondaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
-        );
-
-        // 4. Verify signature from primary address
-        require(
-            util.verifySignature(message, userData.primary, _signature),
-            "Invalid signature"
-        );
-
-        // 5. Mark nonce as used
-        usedNonces[_unifiedId][_nonce] = true;
-
         userData.isSecondary[_secondaryAddress] = false;
         for (uint i = 0; i < userData.secondaries.length; i++) {
             if (userData.secondaries[i] == _secondaryAddress) {
