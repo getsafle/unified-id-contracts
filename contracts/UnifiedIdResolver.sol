@@ -12,14 +12,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  */
 contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgradeable {
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    // Security constants to prevent DoS attacks from unbounded loops
-    uint256 public constant MAX_SECONDARY_ADDRESSES = 50;
-
     // Core mappings for resolution (single-chain, default chainId = 0)
     mapping(string => address) private unifiedIdToAddress;
     mapping(address => string) private addressToUnifiedId;
@@ -158,11 +150,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Clear secondary addresses
         address[] storage secondaries = secondaryAddresses[_unifiedId];
-        
-        // Prevent unbounded loop DoS by limiting iterations
-        uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
-        
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < secondaries.length; i++) {
             delete isSecondary[_unifiedId][secondaries[i]];
         }
         delete secondaryAddresses[_unifiedId];
@@ -201,11 +189,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Remove from array
         address[] storage secondaries = secondaryAddresses[_unifiedId];
-        
-        // Prevent unbounded loop DoS by limiting iterations
-        uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
-        
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < secondaries.length; i++) {
             if (secondaries[i] == _secondary) {
                 secondaries[i] = secondaries[secondaries.length - 1];
                 secondaries.pop();
@@ -443,11 +427,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Remove from array
         address[] storage secondaries = chainSecondaryAddresses[_unifiedId][_chainId];
-        
-        // Prevent unbounded loop DoS by limiting iterations
-        uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
-        
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < secondaries.length; i++) {
             if (secondaries[i] == _secondary) {
                 secondaries[i] = secondaries[secondaries.length - 1];
                 secondaries.pop();
@@ -477,11 +457,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Clear secondary addresses
         address[] storage secondaries = chainSecondaryAddresses[_unifiedId][_chainId];
-        
-        // Prevent unbounded loop DoS by limiting iterations
-        uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
-        
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < secondaries.length; i++) {
             delete chainIsSecondary[_unifiedId][_chainId][secondaries[i]];
         }
         delete chainSecondaryAddresses[_unifiedId][_chainId];
