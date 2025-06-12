@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "./IUnifiedIdResolver.sol";
@@ -11,6 +11,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     RegistrarStorageUtil public util;
     IUnifiedIdResolver public resolver;
     mapping(address => bool) public authorizedRelayers;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     struct ChainData {
         address primary;
@@ -66,12 +71,56 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
 
 
 
-    modifier verifySignature(bytes memory data, address expectedSigner, bytes memory signature) {
-        (string memory unifiedId, ) = abi.decode(data, (string, address));
-        uint256 nonce = nonces[unifiedId];
-        bytes memory dataWithNonce = abi.encodePacked(data, nonce);
-        require(util.verifySignature(dataWithNonce, expectedSigner, signature), "Invalid signature");
-        _;
+    // Standardize on EIP-712 structured data
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
+    
+    bytes32 public constant REGISTER_TYPEHASH = keccak256(
+        "RegisterUnifiedId(string unifiedId,address primary,uint256 chainId,uint256 nonce)"
+    );
+    
+    bytes32 public immutable DOMAIN_SEPARATOR;
+    
+    constructor() {
+        // Disable initializers on implementation contract (OpenZeppelin best practice)
+        _disableInitializers();
+        
+        DOMAIN_SEPARATOR = keccak256(abi.encode(
+            DOMAIN_TYPEHASH,
+            keccak256("SafleID"),
+            keccak256("1"),
+            block.chainid,
+            address(this)
+        ));
+    }
+
+    function verifySignature(
+        string memory unifiedId,
+        address primary,
+        uint256 chainId,
+        uint256 nonce,
+        uint256 deadline,
+        address signer,
+        bytes memory signature
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            REGISTER_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            primary,
+            chainId,
+            nonce,
+            deadline
+        ));
+        
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            DOMAIN_SEPARATOR,
+            structHash
+        ));
+        
+        // Direct keccak256 call as shown in audit remediation
+        return util.verifySignature(abi.encode(digest), signer, signature);
     }
 
     function initialize(address _util, address _resolver) public initializer {
@@ -125,13 +174,17 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         require(!chainData.exists, "Chain data already exists");
         require(uid.registeredChainIds.length < maxChainsPerUnifiedId, "Maximum chains per unified ID reached");
 
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(unifiedId, chainId, primary);
+        string memory operationType = "REGISTER_UNIFIED_ID";
+
         if (!uid.exists) {
-            requireSignature(data, primary, primarySignature);
+            requireSignature(operationType, fullData, unifiedId, primary, primarySignature);
             uid.masterAddress = primary;
             uid.exists = true;
         } else {
-            requireSignature(data, uid.masterAddress, masterSignature);
-            requireSignature(data, primary, primarySignature);
+            requireSignature(operationType, fullData, unifiedId, uid.masterAddress, masterSignature);
+            requireSignature(operationType, fullData, unifiedId, primary, primarySignature);
         }
 
         chainData.primary = primary;
@@ -158,8 +211,12 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
 
         address currentPrimary = unifiedIds[unifiedId].chains[chainId].primary;
 
-        requireSignature(data, currentPrimary, currentPrimarySignature);
-        requireSignature(data, newPrimary, newPrimarySignature);
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(unifiedId, chainId, currentPrimary, newPrimary);
+        string memory operationType = "UPDATE_PRIMARY_ADDRESS";
+
+        requireSignature(operationType, fullData, unifiedId, currentPrimary, currentPrimarySignature);
+        requireSignature(operationType, fullData, unifiedId, newPrimary, newPrimarySignature);
 
         unifiedIds[unifiedId].chains[chainId].primary = newPrimary;
 
@@ -182,12 +239,25 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         require(unifiedIds[unifiedId].chains[chainId].exists, "Chain data does not exist");
 
         address primary = unifiedIds[unifiedId].chains[chainId].primary;
+        
+        // Prevent adding primary address as secondary
+        require(primary != secondary, "Cannot add primary address as secondary");
 
-        requireSignature(data, primary, primarySignature);
-        requireSignature(data, secondary, secondarySignature);
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(unifiedId, chainId, primary, secondary);
+        string memory operationType = "ADD_SECONDARY_ADDRESS";
+
+        requireSignature(operationType, fullData, unifiedId, primary, primarySignature);
+        requireSignature(operationType, fullData, unifiedId, secondary, secondarySignature);
 
         ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
         require(chainData.secondaries.length < maxSecondaryAddressesPerChain, "Maximum secondary addresses per chain reached");
+
+        // Check for duplicate secondary addresses
+        address[] storage secondaries = chainData.secondaries;
+        for (uint i = 0; i < secondaries.length; i++) {
+            require(secondaries[i] != secondary, "Secondary address already exists");
+        }
 
         chainData.secondaries.push(secondary);
 
@@ -204,17 +274,23 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         address secondary,
         bytes memory data,
         bytes memory signature
-    )
-    external
-    onlyRelayer
-    whenNotPaused
-    verifySignature(data, unifiedIds[unifiedId].chains[chainId].primary, signature)
-    {
+    ) external onlyRelayer whenNotPaused {
         require(unifiedIds[unifiedId].exists, "UnifiedID does not exist");
         require(unifiedIds[unifiedId].chains[chainId].exists, "Chain data does not exist");
 
+        address primary = unifiedIds[unifiedId].chains[chainId].primary;
+        
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(unifiedId, chainId, primary, secondary);
+        string memory operationType = "REMOVE_SECONDARY_ADDRESS";
+        
+        requireSignature(operationType, fullData, unifiedId, primary, signature);
+
         ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
 
+        // Fix unbounded loop vulnerability by adding bounds check
+        require(chainData.secondaries.length <= maxSecondaryAddressesPerChain, "Too many secondary addresses");
+        
         for (uint256 i = 0; i < chainData.secondaries.length; i++) {
             if (chainData.secondaries[i] == secondary) {
                 chainData.secondaries[i] = chainData.secondaries[chainData.secondaries.length - 1];
@@ -235,11 +311,19 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         string calldata newUnifiedId,
         bytes memory data,
         bytes memory signature
-    ) external onlyRelayer whenNotPaused verifySignature(data, unifiedIds[oldUnifiedId].masterAddress, signature) {
+    ) external onlyRelayer whenNotPaused {
         require(!isUnavailableUnifiedId[oldUnifiedId], "Old UnifiedID is unavailable");
         require(!isUnavailableUnifiedId[newUnifiedId], "New UnifiedID is unavailable");
         require(unifiedIds[oldUnifiedId].exists, "Old UnifiedID does not exist");
         require(!unifiedIds[newUnifiedId].exists, "New UnifiedID already exists");
+
+        address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
+        
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(oldUnifiedId, newUnifiedId);
+        string memory operationType = "UPDATE_UNIFIED_ID";
+        
+        requireSignature(operationType, fullData, oldUnifiedId, masterAddress, signature);
 
         _transferUnifiedIdData(oldUnifiedId, newUnifiedId);
         _cleanupOldUnifiedId(oldUnifiedId, newUnifiedId);
@@ -256,13 +340,29 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         updated.masterAddress = existing.masterAddress;
         updated.exists = true;
 
-        // Copy chain data efficiently
+        // Copy chain data properly (fix storage corruption bug)
         for (uint i = 0; i < chainIds.length; i++) {
             uint256 cid = chainIds[i];
-            updated.chains[cid] = existing.chains[cid];
+            ChainData storage existingChain = existing.chains[cid];
+            ChainData storage newChain = updated.chains[cid];
+            
+            // Copy basic fields
+            newChain.primary = existingChain.primary;
+            newChain.exists = existingChain.exists;
+            
+            // Properly copy secondary addresses array (fix storage corruption)
+            // Add bounds checking to prevent DoS
+            uint256 maxSecondaryIterations = existingChain.secondaries.length > maxSecondaryAddressesPerChain 
+                ? maxSecondaryAddressesPerChain 
+                : existingChain.secondaries.length;
+                
+            for (uint j = 0; j < maxSecondaryIterations; j++) {
+                newChain.secondaries.push(existingChain.secondaries[j]);
+            }
+            
             updated.registeredChainIds.push(cid);
 
-            _updateResolverForNewUnifiedId(newUnifiedId, cid, existing.chains[cid]);
+            _updateResolverForNewUnifiedId(newUnifiedId, cid, newChain);
         }
     }
 
@@ -275,7 +375,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
 
             // Add secondary addresses to resolver
             address[] storage secondaries = chainData.secondaries;
-            for (uint j = 0; j < secondaries.length; j++) {
+            
+            // Prevent unbounded loop DoS by limiting iterations
+            uint256 maxSecondaryIterations = secondaries.length > maxSecondaryAddressesPerChain ? maxSecondaryAddressesPerChain : secondaries.length;
+            
+            for (uint j = 0; j < maxSecondaryIterations; j++) {
                 resolver.addUnifiedIdSecondaryAddress(newUnifiedId, chainId, secondaries[j]);
             }
         }
@@ -288,8 +392,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         UnifiedID storage existing = unifiedIds[oldUnifiedId];
         uint256[] memory chainIds = existing.registeredChainIds;
 
+        // Prevent unbounded loop DoS by limiting iterations
+        uint256 maxIterations = chainIds.length > maxChainsPerUnifiedId ? maxChainsPerUnifiedId : chainIds.length;
+
         // Clean up resolver mappings for old unified ID
-        for (uint i = 0; i < chainIds.length; i++) {
+        for (uint i = 0; i < maxIterations; i++) {
             uint256 cid = chainIds[i];
             resolver.clearUnifiedIdMappings(oldUnifiedId, cid);
             delete existing.chains[cid];
@@ -311,8 +418,16 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         address newMasterAddress,
         bytes memory data,
         bytes memory signature
-    ) external onlyRelayer whenNotPaused verifySignature(data, unifiedIds[unifiedId].masterAddress, signature) {
+    ) external onlyRelayer whenNotPaused {
         require(unifiedIds[unifiedId].exists, "UnifiedID does not exist");
+
+        address currentMasterAddress = unifiedIds[unifiedId].masterAddress;
+        
+        // Create comprehensive data for signature validation
+        bytes memory fullData = abi.encode(unifiedId, currentMasterAddress, newMasterAddress);
+        string memory operationType = "UPDATE_MASTER_ADDRESS";
+        
+        requireSignature(operationType, fullData, unifiedId, currentMasterAddress, signature);
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
 
@@ -339,7 +454,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
     // Check if a chain is registered for a unified ID
     function isChainRegistered(string calldata unifiedId, uint256 chainId) external view returns (bool) {
         uint256[] memory chainIds = unifiedIds[unifiedId].registeredChainIds;
-        for (uint i = 0; i < chainIds.length; i++) {
+        
+        // Prevent unbounded loop DoS by limiting iterations
+        uint256 maxIterations = chainIds.length > maxChainsPerUnifiedId ? maxChainsPerUnifiedId : chainIds.length;
+        
+        for (uint i = 0; i < maxIterations; i++) {
             if (chainIds[i] == chainId) {
                 return true;
             }
@@ -386,11 +505,25 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
         return resolver.getAddresses(unifiedId, chainId);
     }
 
-    function requireSignature(bytes memory data, address expectedSigner, bytes memory signature) internal view {
-        (string memory unifiedId, address addressdec) = abi.decode(data, (string, address));
-        uint256 nonce = nonces[unifiedId];
-        bytes memory dataWithNonce = abi.encode(unifiedId, addressdec, nonce);
-        require(util.verifySignature(dataWithNonce, expectedSigner, signature), "Invalid signature");
+    function requireSignature(
+        string memory operationType,
+        bytes memory fullData,
+        string memory unifiedId,
+        address expectedSigner,
+        bytes memory signature
+    ) internal view {
+        // Create comprehensive message hash using consistent abi.encode (not encodePacked)
+        bytes32 messageHash = keccak256(abi.encode(
+            keccak256("SAFLE_ID_OPERATION"),
+            operationType,
+            fullData,
+            nonces[unifiedId],
+            block.chainid,
+            address(this)
+        ));
+        
+        // Use consistent abi.encode for signature verification (not encodePacked)
+        require(util.verifySignature(abi.encode(messageHash), expectedSigner, signature), "Invalid signature");
     }
 
     // === ADMIN FUNCTIONS ===
@@ -467,7 +600,11 @@ contract RegistrarStorageMother is OwnableUpgradeable, UUPSUpgradeable, Pausable
 
         // Remove from registeredChainIds array
         uint256[] storage chainIds = unifiedIds[_unifiedId].registeredChainIds;
-        for (uint i = 0; i < chainIds.length; i++) {
+        
+        // Prevent unbounded loop DoS by limiting iterations
+        uint256 maxIterations = chainIds.length > maxChainsPerUnifiedId ? maxChainsPerUnifiedId : chainIds.length;
+        
+        for (uint i = 0; i < maxIterations; i++) {
             if (chainIds[i] == _chainId) {
                 chainIds[i] = chainIds[chainIds.length - 1];
                 chainIds.pop();
