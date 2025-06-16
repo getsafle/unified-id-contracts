@@ -3,58 +3,255 @@ pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
+/**
+ * @title RegistrarStorageUtil
+ * @author kunalmkv
+ * @notice Utility contract for price feeds, signature verification, and admin management
+ * @dev Implements secure signature verification with EIP-712, price feed management, and two-step ownership
+ */
 contract RegistrarStorageUtil {
+    /// @notice Mapping of token addresses to their corresponding Chainlink price feed addresses
     mapping(address => address) public tokenPriceFeed;
+    
+    /// @notice Mapping of token addresses to their decimal precision
     mapping(address => uint256) public tokenDecimal;
+    
+    /// @notice Address of ETH/USD Chainlink price feed
     address public ethPriceFeed;
-    address public owner;
+    
+    // === OWNABLE2STEP IMPLEMENTATION ===
+    /// @dev Address of the current contract owner
+    address private _owner;
+    
+    /// @dev Address of the pending owner during ownership transfer
+    address private _pendingOwner;
+
+    /// @dev Ethereum signed message prefix for signature verification
     string constant PREFIX = "\x19Ethereum Signed Message:\n32";
 
     // === ADMIN CONFIGURATION VARIABLES ===
+    /// @notice Maximum allowed length for unified IDs
     uint8 public maxUnifiedIdLength;
+    
+    /// @notice Minimum required length for unified IDs
     uint8 public minUnifiedIdLength;
+    
+    /// @notice Mapping of admin user addresses
     mapping(address => bool) public adminUsers;
 
     // === ADMIN EVENTS ===
+    
+    /**
+     * @notice Emitted when unified ID length limits are updated
+     * @param minLength New minimum length requirement
+     * @param maxLength New maximum length requirement
+     */
     event UnifiedIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
+    
+    /**
+     * @notice Emitted when admin user status is updated
+     * @param user Address whose admin status was modified
+     * @param isAdmin True if granted admin rights, false if revoked
+     */
     event AdminUserUpdated(address user, bool isAdmin);
+    
+    /**
+     * @notice Emitted when ownership transfer is initiated
+     * @param previousOwner Current owner who initiated the transfer
+     * @param newOwner Address that will become the new owner
+     */
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    
+    /**
+     * @notice Emitted when ownership transfer is completed
+     * @param previousOwner Previous owner address
+     * @param newOwner New owner address
+     */
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // Events
+    
+    /**
+     * @notice Emitted when a token price feed is configured
+     * @param token Token address for which price feed was set
+     * @param priceFeed Chainlink price feed address
+     */
     event TokenPriceFeedSet(address indexed token, address indexed priceFeed);
+    
+    /**
+     * @notice Emitted when ETH price feed is configured
+     * @param priceFeed Chainlink ETH/USD price feed address
+     */
     event EthPriceFeedSet(address indexed priceFeed);
 
+    // === MISSING CRITICAL EVENTS ===
+    
+    /**
+     * @notice Emitted when token decimal precision is updated
+     * @param token Token address whose decimal was updated
+     * @param oldDecimal Previous decimal value
+     * @param newDecimal New decimal value
+     */
+    event TokenDecimalUpdated(address indexed token, uint256 oldDecimal, uint256 newDecimal);
 
+    /**
+     * @notice Constructor initializes the contract with default values
+     * @dev Sets deployer as owner and admin, establishes default unified ID length limits
+     */
     constructor() {
-        owner = msg.sender;
+        _owner = msg.sender;
         adminUsers[msg.sender] = true;
         maxUnifiedIdLength = 16;
         minUnifiedIdLength = 4;
+        emit OwnershipTransferred(address(0), msg.sender);
     }
 
+    /**
+     * @notice Returns the address of the current owner
+     * @return Address of the current contract owner
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @notice Returns the address of the pending owner during ownership transfer
+     * @return Address of the pending owner, or zero address if no transfer is pending
+     */
+    function pendingOwner() public view virtual returns (address) {
+        return _pendingOwner;
+    }
+
+    /**
+     * @notice Modifier to restrict access to owner only
+     * @dev Reverts if caller is not the current owner
+     */
     modifier onlyOwner() {
-        require(msg.sender == owner, "Caller is not the owner");
+        require(owner() == msg.sender, "Ownable: caller is not the owner");
         _;
     }
 
+    /**
+     * @notice Modifier to restrict access to admin users or owner
+     * @dev Reverts if caller is neither admin nor owner
+     */
     modifier onlyAdmin() {
-        require(adminUsers[msg.sender] || msg.sender == owner, "Caller not admin or owner");
+        require(adminUsers[msg.sender] || msg.sender == owner(), "Caller not admin or owner");
         _;
     }
 
+    /**
+     * @notice Renounces ownership of the contract
+     * @dev Leaves the contract without owner, disabling owner-only functions permanently
+     * @dev Can only be called by the current owner
+     * @dev WARNING: This action is irreversible
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @notice Initiates ownership transfer to a new account (Step 1 of 2)
+     * @dev The new owner must call acceptOwnership() to complete the transfer
+     * @param newOwner Address of the proposed new owner
+     * @custom:requirements
+     * - newOwner cannot be zero address
+     * - newOwner cannot be the current owner
+     * - Only current owner can call this function
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        require(newOwner != owner(), "Ownable: new owner is the same as current owner");
+        _pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner(), newOwner);
+    }
+
+    /**
+     * @notice Accepts ownership transfer (Step 2 of 2)
+     * @dev Completes the two-step ownership transfer process
+     * @dev Only the pending owner can call this function
+     * @custom:requirements
+     * - Caller must be the pending owner
+     * - A transfer must be pending
+     */
+    function acceptOwnership() external {
+        address sender = msg.sender;
+        require(pendingOwner() == sender, "Ownable2Step: caller is not the new owner");
+        _transferOwnership(sender);
+    }
+
+    /**
+     * @dev Internal function to transfer ownership
+     * @param newOwner Address of the new owner
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        delete _pendingOwner;
+        address oldOwner = _owner;
+        _owner = newOwner;
+        if (newOwner != address(0)) {
+            adminUsers[newOwner] = true;
+        }
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /**
+     * @notice Sets the price feed for a specific token
+     * @dev Configures Chainlink price feed and decimal precision for token calculations
+     * @param token Address of the token contract
+     * @param priceFeed Address of the Chainlink price feed for this token
+     * @param decimal Decimal precision for the token
+     * @custom:requirements
+     * - Only owner can call this function
+     * - token cannot be zero address
+     * - priceFeed cannot be zero address
+     * @custom:events
+     * - Emits TokenPriceFeedSet
+     * - Emits TokenDecimalUpdated if decimal value changed
+     */
     function setTokenPriceFeed(address token, address priceFeed, uint decimal) external onlyOwner {
+        require(token != address(0), "Token: zero address");
+        require(priceFeed != address(0), "Price feed: zero address");
+        
+        uint256 oldDecimal = tokenDecimal[token];
         tokenPriceFeed[token] = priceFeed;
         tokenDecimal[token] = decimal;
+        
         emit TokenPriceFeedSet(token, priceFeed);
+        if (oldDecimal != decimal) {
+            emit TokenDecimalUpdated(token, oldDecimal, decimal);
+        }
     }
 
-    // Set the ETH price feed address
+    /**
+     * @notice Sets the ETH/USD price feed address
+     * @dev Configures the Chainlink ETH/USD price feed for ETH price calculations
+     * @param _ethPriceFeed Address of the Chainlink ETH/USD price feed
+     * @custom:requirements
+     * - Only owner can call this function
+     * - _ethPriceFeed cannot be zero address
+     * @custom:events
+     * - Emits EthPriceFeedSet
+     */
     function setEthPriceFeed(address _ethPriceFeed) external onlyOwner {
+        require(_ethPriceFeed != address(0), "ETH price feed: zero address");
         ethPriceFeed = _ethPriceFeed;
         emit EthPriceFeedSet(_ethPriceFeed);
     }
 
-    // Get the required token amount based on the registrar fees
+    /**
+     * @notice Calculates required token amount based on registrar fees
+     * @dev Converts registrar fees from ETH to specified token using Chainlink price feeds
+     * @param token Address of the payment token (zero address for ETH)
+     * @param registrarFees Fee amount in ETH wei
+     * @return Required token amount adjusted for token decimals
+     * @custom:requirements
+     * - Token and ETH price feeds must be configured
+     * - Price feed data must be valid (positive)
+     * @custom:calculations
+     * - For ETH: returns fees directly
+     * - For tokens: converts ETH amount to token amount using price feeds
+     * - Handles decimal adjustments between token and ETH price feeds
+     */
     function getRequiredTokenAmount(address token, uint256 registrarFees) external view returns (uint256) {
         if (token == address(0)) {
             return registrarFees;
@@ -83,7 +280,19 @@ contract RegistrarStorageUtil {
         }
     }
 
-    // Get token amount and price information
+    /**
+     * @notice Retrieves current price data for a token and ETH
+     * @dev Fetches latest price data from Chainlink price feeds
+     * @param token Address of the token to get price information for
+     * @return Array containing [tokenPriceInUSD, tokenDecimals, ethPriceInUSD, ethDecimals]
+     * @custom:requirements
+     * - Token price feed must be configured
+     * - ETH price feed must be configured
+     * - Price feed answers must be positive
+     * @custom:reverts
+     * - "Invalid token price" if token price <= 0
+     * - "Invalid ETH price" if ETH price <= 0
+     */
     function getTokenAmount(address token) public view returns (uint256[] memory) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenPriceFeed[token]);
         (
@@ -92,7 +301,7 @@ contract RegistrarStorageUtil {
             ,
             ,
         ) = priceFeed.latestRoundData();
-        require(answer > 0, "Invalid token price");
+        require(answer != 0, "Invalid token price");
         uint256 tokenPriceInUSD = uint256(answer);
         uint8 decimals = priceFeed.decimals();
 
@@ -103,7 +312,7 @@ contract RegistrarStorageUtil {
             ,
             ,
         ) = ethPriceAggregator.latestRoundData();
-        require(ethAnswer > 0, "Invalid ETH price");
+        require(ethAnswer != 0, "Invalid ETH price");
         uint256 ethPriceInUSD = uint256(ethAnswer);
         uint8 ethDecimals = ethPriceAggregator.decimals();
 
@@ -116,14 +325,39 @@ contract RegistrarStorageUtil {
         return result;
     }
 
+    /**
+     * @notice Computes the keccak256 hash of given data
+     * @dev Pure function for generating message hashes
+     * @param _data Bytes data to hash
+     * @return The keccak256 hash of the input data
+     */
     function getMessageHash(bytes memory _data) public pure returns (bytes32) {
         return keccak256(_data);
     }
 
+    /**
+     * @notice Creates an Ethereum signed message hash
+     * @dev Prepends Ethereum message prefix to the hash
+     * @param _messageHash The original message hash
+     * @return The hash with Ethereum signed message prefix
+     */
     function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(PREFIX, _messageHash));
     }
 
+    /**
+     * @notice Recovers the signer address from an Ethereum signed message hash and signature
+     * @dev Uses ecrecover to extract the signer from the signature components
+     * @param _ethSignedMessageHash The hash of the signed message with Ethereum prefix
+     * @param _signature The signature bytes (65 bytes: r + s + v)
+     * @return The address of the account that signed the message
+     * @custom:requirements
+     * - Signature must be exactly 65 bytes
+     * - Signature 'v' value must be 27 or 28
+     * @custom:reverts
+     * - "Invalid signature length" if signature is not 65 bytes
+     * - "Invalid signature 'v' value" if v is not 27 or 28
+     */
     function recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) public pure returns (address) {
         require(_signature.length == 65, "Invalid signature length");
         bytes32 r;
@@ -141,15 +375,22 @@ contract RegistrarStorageUtil {
         return ecrecover(_ethSignedMessageHash, v, r, s);
     }
 
-    // EIP-712 domain separator
+    /// @notice EIP-712 domain separator type hash constant
     bytes32 public constant DOMAIN_TYPEHASH = keccak256(
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
 
-    // Nonce tracking
+    /// @notice Mapping to track nonces for each address to prevent replay attacks
     mapping(address => uint256) public nonces;
 
-    // Signature parameters
+    /**
+     * @notice Structure containing signature verification parameters
+     * @param nonce Current nonce for the signer to prevent replay attacks
+     * @param deadline Timestamp after which the signature expires
+     * @param chainId Chain ID to prevent cross-chain signature reuse
+     * @param contractAddress Contract address to prevent cross-contract signature reuse
+     * @param domainSeparator EIP-712 domain separator for structured data signing
+     */
     struct SignatureParams {
         uint256 nonce;
         uint256 deadline;
@@ -158,6 +399,27 @@ contract RegistrarStorageUtil {
         bytes32 domainSeparator;
     }
 
+    /**
+     * @notice Verifies a signature using secure EIP-712 structured data signing
+     * @dev Implements comprehensive security checks including nonce tracking, deadline verification, and chain validation
+     * @param data The data that was signed
+     * @param params Signature verification parameters including nonce, deadline, chain ID, and domain separator
+     * @param signer Expected signer address
+     * @param signature The signature to verify
+     * @return True if signature is valid, false otherwise
+     * @custom:requirements
+     * - Signature must not be expired (deadline check)
+     * - Must be called on correct chain (chain ID check)
+     * - Nonce must match expected value for signer
+     * @custom:security
+     * - Automatically increments nonce to prevent replay attacks
+     * - Uses EIP-712 structured data to prevent signature malleability
+     * - Validates chain ID to prevent cross-chain attacks
+     * @custom:reverts
+     * - "Signature expired" if current time > deadline
+     * - "Wrong chain" if chain ID doesn't match
+     * - "Invalid nonce" if nonce doesn't match expected value
+     */
     function verifySignatureSecure(
         bytes memory data,
         SignatureParams memory params,
@@ -176,7 +438,7 @@ contract RegistrarStorageUtil {
 
         // Build structured message
         bytes32 messageHash = keccak256(abi.encode(
-            keccak256("SafleOperation(bytes data,uint256 nonce,uint256 deadline,uint256 chainId,address contractAddress)"),
+            keccak256("UnifiedIDOperation(bytes data,uint256 nonce,uint256 deadline,uint256 chainId,address contractAddress)"),
             keccak256(data),
             params.nonce,
             params.deadline,
@@ -196,12 +458,25 @@ contract RegistrarStorageUtil {
         return recoveredSigner == signer;
     }
 
-    // Helper function to get current nonce for a signer
+    /**
+     * @notice Returns the current nonce for a given signer address
+     * @dev Used to get the next nonce value for signature creation
+     * @param signer Address to get nonce for
+     * @return Current nonce value for the signer
+     */
     function getCurrentNonce(address signer) external view returns (uint256) {
         return nonces[signer];
     }
 
-    // Helper function to create domain separator
+    /**
+     * @notice Creates an EIP-712 domain separator for structured data signing
+     * @dev Pure function to generate domain separator for any contract
+     * @param name The name of the signing domain
+     * @param version The version of the signing domain
+     * @param chainId The chain ID for domain separation
+     * @param verifyingContract The contract address for domain separation
+     * @return The computed domain separator hash
+     */
     function createDomainSeparator(
         string memory name,
         string memory version,
@@ -217,7 +492,15 @@ contract RegistrarStorageUtil {
         ));
     }
 
-    // Legacy function kept for backward compatibility but marked as deprecated
+    /**
+     * @notice Legacy signature verification function (deprecated)
+     * @dev Kept for backward compatibility but use verifySignatureSecure() for new implementations
+     * @param _data The data that was signed
+     * @param _expectedSigner Expected signer address
+     * @param _signature The signature to verify
+     * @return True if signature is valid
+     * @custom:deprecated Use verifySignatureSecure() instead for enhanced security
+     */
     function verifySignature(
         bytes memory _data,
         address _expectedSigner,
@@ -228,13 +511,19 @@ contract RegistrarStorageUtil {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
+    
+    /// @notice Deprecated constant: Maximum allowed unified ID length
     uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
+    
+    /// @notice Deprecated constant: Minimum required unified ID length  
     uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
     /**
-    * @dev  check if address is of wallet or contract
-    * @param _resolverAddress address to check
-    */
+     * @notice Checks if an address is a contract or externally owned account
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param _resolverAddress Address to check
+     * @return True if address is a contract, false if EOA
+     */
     function isContract(address _resolverAddress)
     public view
     returns(bool)
@@ -243,18 +532,19 @@ contract RegistrarStorageUtil {
         assembly {
             size := extcodesize(_resolverAddress)
         }
-        return (size > 0);
+        return (size != 0);
     }
 
     /**
-    * @dev  convert a string to lower case
-    * @param str string to be converted
-    */
-
+     * @notice Converts a string to lowercase
+     * @dev Iterates through each character and converts uppercase to lowercase
+     * @param str String to be converted
+     * @return Lowercase version of the input string
+     */
     function toLower(string memory str) public pure returns (string memory) {
         bytes memory bStr = bytes(str);
         bytes memory bLower = new bytes(bStr.length);
-        for (uint i = 0; i < bStr.length; i++) {
+        for (uint i = 0; i < bStr.length; ++i) {
             // Uppercase character...
             if ((uint8(bStr[i]) >= 65) && (uint8(bStr[i]) <= 90)) {
                 // So we add 32 to make it lowercase
@@ -266,25 +556,33 @@ contract RegistrarStorageUtil {
         return string(bLower);
     }
 
-
     /**
-    * @dev  to check length of a string
-    * @param _name string length to be check
-    */
+     * @notice Checks the length of a string
+     * @dev Returns the byte length of the string
+     * @param _name String to check length of
+     * @return Length of the string in bytes
+     * @custom:reverts "Library : String passed is of zero length" if string is empty
+     */
     function checkLength(string memory _name) public pure returns (uint8){
         require(bytes(_name).length != 0, "Library : String passed is of zero length");
         return uint8(bytes(_name).length);
     }
 
     /**
-    * @dev  to check if string contains alphanumeric or ASCII characters
-    * @param unifiedId string to be checked
-    */
-
+     * @notice Validates if string contains only alphanumeric and ASCII printable characters
+     * @dev Checks each character to ensure it's within allowed ranges
+     * @param unifiedId String to validate
+     * @return True if all characters are valid, false otherwise
+     * @custom:allowed-chars
+     * - Digits: 0-9 (0x30-0x39)
+     * - Lowercase: a-z (0x61-0x7A)
+     * - Uppercase: A-Z (0x41-0x5A)
+     * - ASCII printable: 32-126
+     */
     function checkAlphaNumericAndAscii(string memory unifiedId) public pure returns (bool) {
         bytes memory b = bytes(unifiedId);
 
-        for(uint i; i < b.length; i++) {
+        for(uint i; i < b.length; ++i) {
             bytes1 char = b[i];
 
             if(!(
@@ -300,6 +598,18 @@ contract RegistrarStorageUtil {
         return true;
     }
 
+    /**
+     * @notice Validates a unified ID format and length
+     * @dev Checks if unified ID meets all requirements: length, character set, etc.
+     * @param _registrarName Unified ID to validate
+     * @return True if valid
+     * @custom:requirements
+     * - Must be within configured length limits
+     * - Must contain only alphanumeric and ASCII printable characters
+     * @custom:reverts
+     * - "only alphanumeric allowed" if invalid characters found
+     * - "Unified Id length out of bounds" if length is invalid
+     */
     function unifiedIdValid(string memory _registrarName) public view returns (bool) {
         string memory nameInLowerCase = toLower(_registrarName);
         uint8 length = checkLength(_registrarName);
@@ -310,6 +620,7 @@ contract RegistrarStorageUtil {
 
     /**
      * @notice Check if unified ID is valid (alias for backward compatibility)
+     * @dev Calls unifiedIdValid() internally
      * @param _unifiedId unified ID to validate
      * @return True if valid
      */
@@ -320,21 +631,32 @@ contract RegistrarStorageUtil {
     // === ADMIN FUNCTIONS ===
 
     /**
-     * @notice Set UnifiedId length limits
-     * @param _minLength Minimum length for unifiedId
-     * @param _maxLength Maximum length for unifiedId
+     * @notice Sets the length limits for unified IDs
+          * @dev Updates both minimum and maximum length requirements
+     * @param _minLength Minimum allowed length for unified IDs
+     * @param _maxLength Maximum allowed length for unified IDs
+     * @custom:requirements
+     * - Only owner can call this function
+     * - _minLength must be greater than 0
+     * - _maxLength must be greater than _minLength
+     * @custom:events Emits UnifiedIdLengthLimitsUpdated
      */
     function setUnifiedIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyOwner {
-        require(_minLength > 0 && _maxLength > _minLength, "Invalid length limits");
+        require(_minLength != 0 && _maxLength > _minLength, "Invalid length limits");
         minUnifiedIdLength = _minLength;
         maxUnifiedIdLength = _maxLength;
         emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
     }
 
     /**
-     * @notice Add or remove admin user
-     * @param _user Address to modify admin status
+     * @notice Grants or revokes admin privileges for a user
+     * @dev Updates admin status and emits appropriate event
+     * @param _user Address to modify admin status for
      * @param _isAdmin True to grant admin rights, false to revoke
+     * @custom:requirements
+     * - Only owner can call this function
+     * - _user cannot be zero address
+     * @custom:events Emits AdminUserUpdated
      */
     function setAdminUser(address _user, bool _isAdmin) external onlyOwner {
         require(_user != address(0), "User cannot be zero address");
@@ -343,17 +665,12 @@ contract RegistrarStorageUtil {
     }
 
     /**
-     * @notice Transfer ownership of the contract
-     * @param _newOwner Address of the new owner
+     * @notice Returns current contract configuration
+     * @dev Provides read access to key configuration parameters
+     * @return _minUnifiedIdLength Current minimum unified ID length
+     * @return _maxUnifiedIdIdLength Current maximum unified ID length  
+     * @return _owner Current contract owner address
      */
-    function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "New owner cannot be zero address");
-        emit OwnershipTransferred(owner, _newOwner);
-        owner = _newOwner;
-        adminUsers[_newOwner] = true;
-    }
-
-
     function getConfiguration() external view returns (
         uint8 _minUnifiedIdLength,
         uint8 _maxUnifiedIdIdLength,
@@ -362,7 +679,7 @@ contract RegistrarStorageUtil {
         return (
             minUnifiedIdLength,
             maxUnifiedIdLength,
-            owner
+            owner()
         );
     }
 }

@@ -2,19 +2,89 @@
 pragma solidity =0.8.25;
 
 import "./IUnifiedIdResolver.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title UnifiedIdResolver
- * @notice Resolver contract for UnifiedId name resolution
- * @dev Handles all address<->UnifiedId mappings and secondary addresses
+ * @author kunalmkv
+ * @notice Resolver contract for UnifiedId name resolution across multiple blockchains
+ * @dev Handles all address<->UnifiedId mappings, secondary addresses, and multi-chain resolution
+ * @dev Implements both single-chain backward compatibility and multi-chain functionality
+ * @dev Uses UUPS upgradeable pattern with comprehensive authorization controls
  */
-contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgradeable {
+contract UnifiedIdResolver is IUnifiedIdResolver, Initializable, UUPSUpgradeable {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    // === OWNABLE2STEP IMPLEMENTATION ===
+    address private _owner;
+    address private _pendingOwner;
+
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Returns the address of the pending owner.
+     */
+    function pendingOwner() public view virtual returns (address) {
+        return _pendingOwner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(owner() == msg.sender, "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner(), newOwner);
+    }
+
+    /**
+     * @dev The new owner accepts the ownership transfer.
+     */
+    function acceptOwnership() external {
+        address sender = msg.sender;
+        require(pendingOwner() == sender, "Ownable2Step: caller is not the new owner");
+        _transferOwnership(sender);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        delete _pendingOwner;
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 
     // Security constants to prevent DoS attacks from unbounded loops
@@ -40,6 +110,9 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
     // Registry contract that can authorize calls
     address public registry;
 
+    event AuthorizationUpdated(address indexed addr, bool authorized, address indexed updatedBy);
+    event RegistryUpdated(address indexed oldRegistry, address indexed newRegistry, address indexed updatedBy);
+
     modifier onlyAuthorized() {
         require(
             authorizedCallers[msg.sender] ||
@@ -56,8 +129,12 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
     }
 
     function initialize(address _registry) public initializer {
-        __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        
+        // Initialize ownership
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), msg.sender);
+        
         registry = _registry;
         authorizedCallers[_registry] = true;
     }
@@ -71,7 +148,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
      * @param _unifiedId The UnifiedId to resolve
      * @return The primary address associated with the UnifiedId
      */
-    function addr(string calldata _unifiedId) external view override returns (address) {
+    function resolvePrimaryAddressFromUnifiedID(string calldata _unifiedId) external view override returns (address) {
         // Check legacy mapping first, then chain-specific mapping for chainId 0
         address legacyAddr = unifiedIdToAddress[_unifiedId];
         if (legacyAddr != address(0)) {
@@ -88,7 +165,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
     function unifiedId(address _addr) external view override returns (string memory) {
         // Check legacy mapping first, then chain-specific mapping for chainId 0
         string memory legacyId = addressToUnifiedId[_addr];
-        if (bytes(legacyId).length > 0) {
+        if (bytes(legacyId).length != 0) {
             return legacyId;
         }
         return chainAddressToUnifiedId[_addr][0];
@@ -117,7 +194,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Clear old forward mapping if new address has existing mapping
         string memory oldUnifiedId = addressToUnifiedId[_addr];
-        if (bytes(oldUnifiedId).length > 0) {
+        if (bytes(oldUnifiedId).length != 0) {
             delete unifiedIdToAddress[oldUnifiedId];
         }
 
@@ -162,7 +239,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
         // Prevent unbounded loop DoS by limiting iterations
         uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
 
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < maxIterations; ++i) {
             delete isSecondary[_unifiedId][secondaries[i]];
         }
         delete secondaryAddresses[_unifiedId];
@@ -205,7 +282,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
         // Prevent unbounded loop DoS by limiting iterations
         uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
 
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < maxIterations; ++i) {
             if (secondaries[i] == _secondary) {
                 secondaries[i] = secondaries[secondaries.length - 1];
                 secondaries.pop();
@@ -255,6 +332,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
      */
     function setAuthorization(address _addr, bool _authorized) external override onlyOwnerOrRegistry {
         authorizedCallers[_addr] = _authorized;
+        emit AuthorizationUpdated(_addr, _authorized, msg.sender);
     }
 
     /**
@@ -262,8 +340,11 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
      * @param _registry New registry address
      */
     function setRegistry(address _registry) external onlyOwner {
+        require(_registry != address(0), "Registry: zero address");
+        address oldRegistry = registry;
         registry = _registry;
         authorizedCallers[_registry] = true;
+        emit RegistryUpdated(oldRegistry, _registry, msg.sender);
     }
 
     // ==================== DEBUG FUNCTIONS ====================
@@ -391,7 +472,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
 
         // Clear old forward mapping if new address has existing mapping
         string memory oldUnifiedId = chainAddressToUnifiedId[_primary][_chainId];
-        if (bytes(oldUnifiedId).length > 0) {
+        if (bytes(oldUnifiedId).length != 0) {
             delete chainUnifiedIdToAddress[oldUnifiedId][_chainId];
         }
 
@@ -447,7 +528,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
         // Prevent unbounded loop DoS by limiting iterations
         uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
 
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < maxIterations; ++i) {
             if (secondaries[i] == _secondary) {
                 secondaries[i] = secondaries[secondaries.length - 1];
                 secondaries.pop();
@@ -481,7 +562,7 @@ contract UnifiedIdResolver is IUnifiedIdResolver, UUPSUpgradeable, OwnableUpgrad
         // Prevent unbounded loop DoS by limiting iterations
         uint256 maxIterations = secondaries.length > MAX_SECONDARY_ADDRESSES ? MAX_SECONDARY_ADDRESSES : secondaries.length;
 
-        for (uint i = 0; i < maxIterations; i++) {
+        for (uint i = 0; i < maxIterations; ++i) {
             delete chainIsSecondary[_unifiedId][_chainId][secondaries[i]];
         }
         delete chainSecondaryAddresses[_unifiedId][_chainId];
