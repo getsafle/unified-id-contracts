@@ -2,6 +2,7 @@
 pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
+import "./IUnifiedIdResolver.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -21,6 +22,8 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     bool public isPaused;
     uint256 public totalUnifiedIdRegistered;
     RegistrarStorageUtil public util;
+    IUnifiedIdResolver public resolver;
+    uint256 public chainId; // Current chain ID for this contract instance
     mapping(address => bool) public authorizedRelayers;
     mapping(address => bool) public isRegistrarAlreadyRegistered;
     mapping(address => string) public registrarNames;
@@ -120,12 +123,12 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         require(adminUsers[msg.sender] || msg.sender == owner(), "Caller not admin or owner");
         _;
     }
-    
+
     modifier notInEmergencyMode() {
         require(!emergencyMode, "Contract in emergency mode");
         _;
     }
-    
+
     modifier publicRegistrarAllowed() {
         require(publicRegistrarRegistration || msg.sender == owner() || adminUsers[msg.sender], "Public registrar registration disabled");
         _;
@@ -133,11 +136,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function initialize(address _RegistrarStorageUtil) public initializer {
+    function initialize(address _RegistrarStorageUtil, address _resolver, uint256 _chainId) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
-        
+        resolver = IUnifiedIdResolver(_resolver);
+        chainId = _chainId;
+
         // === ADMIN DEFAULTS ===
         maxSecondaryAddresses = 10;
         publicRegistrarRegistration = false;
@@ -149,6 +154,14 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
 
     function setUtilImplementation(address _RegistrarStorageUtil) external onlyOwner {
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
+    }
+
+    function setResolver(address _resolver) external onlyOwner {
+        resolver = IUnifiedIdResolver(_resolver);
+    }
+
+    function setChainId(uint256 _chainId) external onlyOwner {
+        chainId = _chainId;
     }
 
     function setAuthorizedRelayer(address _relayer, bool authorized) external onlyOwner {
@@ -208,6 +221,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         totalRegisteredUnifiedIds++;
         unavailableUnifiedIds[_unifiedId] = true;
         totalUnifiedIdRegistered++;
+
+        // Update resolver with unified ID registration
+        resolver.setUnifiedIdPrimaryAddress(_unifiedId, chainId, _primaryAddress);
+
         emit UnifiedIDRegistered(_unifiedId, _primaryAddress, block.timestamp);
         return true;
     }
@@ -218,13 +235,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _signature,
         bytes calldata _options
     )
-        external
-        payable
-        whenNotPaused
-        unifiedIdExists(_oldUnifiedId)
-        unifiedIdDoesNotExist(_newUnifiedId)
-        onlyRegistrar
-        returns (bool)
+    external
+    payable
+    whenNotPaused
+    unifiedIdExists(_oldUnifiedId)
+    unifiedIdDoesNotExist(_newUnifiedId)
+    onlyRegistrar
+    returns (bool)
     {
         require(util.isUnifiedIdValid(_newUnifiedId), "Invalid new UnifiedId format");
         emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, _signature, _options);
@@ -237,10 +254,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         require(registeredUnifiedIds[_oldUnifiedId], "Old UnifiedID not found");
         require(!registeredUnifiedIds[_newUnifiedId], "New UnifiedID already exists");
-        
+
         UserData storage userData = userAddresses[_oldUnifiedId];
         address primaryAddress = userData.primary;
-        
+
         // Update address mappings
         resolveAddressFromUnifiedId[_newUnifiedId] = primaryAddress;
         delete resolveAddressFromUnifiedId[_oldUnifiedId];
@@ -251,23 +268,30 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         newUserData.primary = primaryAddress;
         newUserData.exists = true;
 
+        // Update resolver - clear old mappings and set new ones
+        resolver.clearUnifiedIdMappings(_oldUnifiedId, chainId);
+        resolver.setUnifiedIdPrimaryAddress(_newUnifiedId, chainId, primaryAddress);
+
         // Copy secondary addresses
         for (uint i = 0; i < userData.secondaries.length; i++) {
             address secondaryAddr = userData.secondaries[i];
             newUserData.isSecondary[secondaryAddr] = true;
             newUserData.secondaries.push(secondaryAddr);
+
+            // Update resolver with secondary address
+            resolver.addUnifiedIdSecondaryAddress(_newUnifiedId, chainId, secondaryAddr);
         }
 
         delete registeredUnifiedIds[_oldUnifiedId];
         registeredUnifiedIds[_newUnifiedId] = true;
-        
+
         // Mark as unavailable
         unavailableUnifiedIds[_oldUnifiedId] = true;
         unavailableUnifiedIds[_newUnifiedId] = true;
-        
+
         // Clean up old user data
         delete userAddresses[_oldUnifiedId];
-        
+
         emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, primaryAddress, block.timestamp);
         return true;
     }
@@ -299,6 +323,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         resolveAddressFromUnifiedId[_unifiedId] = _newPrimaryAddress;
         resolveUnifiedIdFromAddress[_newPrimaryAddress] = _unifiedId;
         resolveUnifiedIdFromAddress[oldPrimary] = "";
+
+        // Update resolver with new primary address
+        resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
+
         emit UnifiedIDUpdated(_unifiedId, oldPrimary, _newPrimaryAddress);
         return true;
     }
@@ -330,6 +358,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         UserData storage userData = userAddresses[_unifiedId];
         userData.isSecondary[_secondaryAddress] = true;
         userData.secondaries.push(_secondaryAddress);
+
+        // Update resolver with secondary address
+        resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
+
         emit SecondaryAddressAdded(_unifiedId, _secondaryAddress);
         return true;
     }
@@ -357,6 +389,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
                 break;
             }
         }
+
+        // Update resolver to remove secondary address
+        resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
+
         emit SecondaryAddressRemoved(_unifiedId, _secondaryAddress);
         return true;
     }
@@ -385,8 +421,51 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         return totalRegisteredUnifiedIds;
     }
 
+    // === RESOLVER INTEGRATION FUNCTIONS ===
+
+    /**
+     * @notice Get unified ID from address via resolver
+     * @param addr Address to lookup
+     * @return Unified ID associated with the address on current chain
+     */
+    function resolveAddressToUnifiedId(address addr) external view returns (string memory) {
+        return resolver.getUnifiedIdFromAddress(addr, chainId);
+    }
+
+    /**
+     * @notice Get primary address for unified ID via resolver
+     * @param unifiedId Unified ID to lookup
+     * @return Primary address on current chain
+     */
+    function resolvePrimaryAddress(string calldata unifiedId) external view returns (address) {
+        return resolver.getPrimaryAddress(unifiedId, chainId);
+    }
+
+    /**
+     * @notice Get all addresses for unified ID via resolver
+     * @param unifiedId Unified ID to lookup
+     * @return primary Primary address
+     * @return secondaries Array of secondary addresses
+     */
+    function resolveAllAddresses(string calldata unifiedId)
+    external view returns (address primary, address[] memory secondaries) {
+        return resolver.getAddresses(unifiedId, chainId);
+    }
+
+    /**
+     * @notice Check if address is associated with unified ID via resolver
+     * @param unifiedId Unified ID to check
+     * @param addr Address to verify
+     * @return isPrimary True if address is primary
+     * @return isSecondary True if address is secondary
+     */
+    function resolveAddressAssociation(string calldata unifiedId, address addr)
+    external view returns (bool isPrimary, bool isSecondary) {
+        return resolver.isAddressAssociated(unifiedId, chainId, addr);
+    }
+
     // === ADMIN FUNCTIONS ===
-    
+
     /**
      * @notice Set maximum number of secondary addresses per unified ID
      * @param _maxSecondaryAddresses New maximum limit
@@ -396,7 +475,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         maxSecondaryAddresses = _maxSecondaryAddresses;
         emit MaxSecondaryAddressesUpdated(oldMax, _maxSecondaryAddresses);
     }
-    
+
     /**
      * @notice Enable/disable registrar registration
      * @param _enabled True to enable public registration, false to restrict to admin only
@@ -405,7 +484,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         publicRegistrarRegistration = _enabled;
         emit PublicRegistrarRegistrationToggled(_enabled);
     }
-    
+
     /**
      * @notice Toggle emergency mode - stops all operations except admin functions
      * @param _enabled True to enable emergency mode, false to disable
@@ -414,7 +493,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         emergencyMode = _enabled;
         emit EmergencyModeToggled(_enabled);
     }
-    
+
     /**
      * @notice Add or remove admin user
      * @param _user Address to modify admin status
@@ -426,7 +505,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         emit AdminUserUpdated(_user, _isAdmin);
     }
 
-    
+
     /**
      * @notice Set unified ID length limits
      * @param _minLength Minimum length for unified IDs
@@ -438,7 +517,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         maxUnifiedIdLength = _maxLength;
         emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
     }
-    
+
     /**
      * @notice Emergency function to mark unified ID as unavailable
      * @param _unifiedId Unified ID to mark as unavailable
@@ -446,7 +525,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyAdmin {
         unavailableUnifiedIds[_unifiedId] = true;
     }
-    
+
     /**
      * @notice Emergency function to mark unified ID as available
      * @param _unifiedId Unified ID to mark as available
@@ -454,7 +533,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyAdmin {
         unavailableUnifiedIds[_unifiedId] = false;
     }
-    
+
     /**
      * @notice Emergency function to remove registrar
      * @param _registrarAddress Address of registrar to remove
@@ -467,7 +546,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         isAddressTaken[_registrarAddress] = false;
         registrarNameToAddress[registrarName] = address(0);
         delete registrarNames[_registrarAddress];
-        
+
         // Remove from registrarAddresses array
         for (uint i = 0; i < registrarAddresses.length; i++) {
             if (registrarAddresses[i] == _registrarAddress) {
@@ -477,13 +556,17 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
             }
         }
     }
-    
 
-    
+
+
     /**
-     * @notice Get contract configuration
-     * @return Configuration struct with all admin-controlled parameters
-     */
+    * @notice Get contract configuration
+ * @return _maxSecondaryAddresses The maximum number of secondary addresses allowed
+ * @return _publicRegistrarRegistration Whether public registrar registration is enabled
+ * @return _emergencyMode Whether the contract is in emergency mode
+ * @return _minUnifiedIdLength The minimum length of a unified ID
+ * @return _maxUnifiedIdLength The maximum length of a unified ID
+ */
     function getConfiguration() external view returns (
         uint256 _maxSecondaryAddresses,
         bool _publicRegistrarRegistration,
@@ -500,8 +583,9 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
+
     // === REGISTRAR ENUMERATION FUNCTIONS ===
-    
+
     /**
      * @notice Get all registered registrar addresses
      * @return Array of all registrar addresses
@@ -509,7 +593,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function getAllRegistrars() external view returns (address[] memory) {
         return registrarAddresses;
     }
-    
+
     /**
      * @notice Get all registrars with their names
      * @return addresses Array of registrar addresses
@@ -519,16 +603,16 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         uint256 length = registrarAddresses.length;
         addresses = new address[](length);
         names = new string[](length);
-        
+
         for (uint i = 0; i < length; i++) {
             addresses[i] = registrarAddresses[i];
             names[i] = registrarNames[registrarAddresses[i]];
         }
-        
+
         return (addresses, names);
     }
 
-    
+
     /**
      * @notice Get total number of registered registrars
      * @return Total count of registrars
@@ -536,9 +620,9 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function getTotalRegistrars() external view returns (uint256) {
         return registrarAddresses.length;
     }
-    
 
-    
+
+
     /**
      * @notice Check if an address is a registrar and get its details
      * @param _address Address to check
