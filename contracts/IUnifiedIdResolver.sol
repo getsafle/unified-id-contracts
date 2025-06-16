@@ -314,8 +314,8 @@ interface IUnifiedIdResolver {
      * @custom:comprehensive Handles all address types in one function call
      */
     function resolveAnyAddressToUnifiedId(address addr) external view returns (
-        string memory unifiedId, 
-        bool isPrimary, 
+        string memory unifiedId,
+        bool isPrimary,
         bool isSecondary
     );
 
@@ -331,8 +331,8 @@ interface IUnifiedIdResolver {
      * @custom:multi-chain Supports cross-chain universal address resolution
      */
     function resolveAnyAddressToUnifiedId(address addr, uint256 chainId) external view returns (
-        string memory unifiedId, 
-        bool isPrimary, 
+        string memory unifiedId,
+        bool isPrimary,
         bool isSecondary
     );
 

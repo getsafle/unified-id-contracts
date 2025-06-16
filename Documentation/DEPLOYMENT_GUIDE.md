@@ -116,8 +116,6 @@ Ensure all contracts compile without errors:
 # All contracts should show green checkmarks
 ✅ IUnifiedIdResolver.sol
 ✅ SignatureVerifier.sol
-✅ RegistrarStorageChildEventsLib.sol
-✅ RegistrarOperationsLib.sol
 ✅ RegistrarStorageUtil.sol
 ✅ UnifiedIdResolver.sol
 ✅ MotherContract.sol

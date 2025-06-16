@@ -11,15 +11,15 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @dev Implements secure signature verification with EIP-712, price feed management, two-step ownership, and OpenZeppelin AccessControl
  */
 contract RegistrarStorageUtil is AccessControl {
-    
+
     // ==================== ROLE DEFINITIONS ====================
-    
+
     /// @notice Role for admin users with elevated privileges
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    
+
     /// @notice Role for price feed managers
     bytes32 public constant PRICE_FEED_MANAGER_ROLE = keccak256("PRICE_FEED_MANAGER_ROLE");
-    
+
     /// @notice Role for configuration managers
     bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
 
@@ -105,13 +105,13 @@ contract RegistrarStorageUtil is AccessControl {
         _owner = msg.sender;
         maxUnifiedIdLength = 16;
         minUnifiedIdLength = 4;
-        
+
         // Setup roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(PRICE_FEED_MANAGER_ROLE, msg.sender);
         _grantRole(CONFIG_MANAGER_ROLE, msg.sender);
-        
+
         emit OwnershipTransferred(address(0), msg.sender);
     }
 
@@ -526,7 +526,7 @@ contract RegistrarStorageUtil is AccessControl {
     /// @notice Deprecated constant: Maximum allowed unified ID length
     uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
 
-    /// @notice Deprecated constant: Minimum required unified ID length  
+    /// @notice Deprecated constant: Minimum required unified ID length
     uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
     /**
@@ -640,7 +640,7 @@ contract RegistrarStorageUtil is AccessControl {
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
-    
+
     /**
      * @notice Grant admin role to an address
      * @param admin Address to grant admin role
