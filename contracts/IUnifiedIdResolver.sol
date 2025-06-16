@@ -10,28 +10,28 @@ pragma solidity =0.8.25;
  */
 interface IUnifiedIdResolver {
     // Events
-    
+
     /**
      * @notice Emitted when an address is changed for a UnifiedId (single-chain)
      * @param unifiedId The UnifiedId whose address was changed
      * @param newAddress The new address associated with the UnifiedId
      */
     event AddressChanged(string indexed unifiedId, address newAddress);
-    
+
     /**
      * @notice Emitted when a UnifiedId is changed for an address (single-chain)
      * @param addr The address whose UnifiedId was changed
      * @param newUnifiedId The new UnifiedId associated with the address
      */
     event UnifiedIdChanged(address indexed addr, string newUnifiedId);
-    
+
     /**
      * @notice Emitted when a secondary address is added to a UnifiedId (single-chain)
      * @param unifiedId The UnifiedId to which secondary address was added
      * @param secondary The secondary address that was added
      */
     event SecondaryAddressAdded(string indexed unifiedId, address secondary);
-    
+
     /**
      * @notice Emitted when a secondary address is removed from a UnifiedId (single-chain)
      * @param unifiedId The UnifiedId from which secondary address was removed
@@ -40,7 +40,7 @@ interface IUnifiedIdResolver {
     event SecondaryAddressRemoved(string indexed unifiedId, address secondary);
 
     // Multi-chain events
-    
+
     /**
      * @notice Emitted when an address is changed for a UnifiedId on a specific chain
      * @param unifiedId The UnifiedId whose address was changed
@@ -48,7 +48,7 @@ interface IUnifiedIdResolver {
      * @param newAddress The new address associated with the UnifiedId on the specified chain
      */
     event ChainAddressChanged(string indexed unifiedId, uint256 indexed chainId, address newAddress);
-    
+
     /**
      * @notice Emitted when a secondary address is added to a UnifiedId on a specific chain
      * @param unifiedId The UnifiedId to which secondary address was added
@@ -56,7 +56,7 @@ interface IUnifiedIdResolver {
      * @param secondary The secondary address that was added
      */
     event ChainSecondaryAddressAdded(string indexed unifiedId, uint256 indexed chainId, address secondary);
-    
+
     /**
      * @notice Emitted when a secondary address is removed from a UnifiedId on a specific chain
      * @param unifiedId The UnifiedId from which secondary address was removed
@@ -66,7 +66,7 @@ interface IUnifiedIdResolver {
     event ChainSecondaryAddressRemoved(string indexed unifiedId, uint256 indexed chainId, address secondary);
 
     // Core resolution functions (single-chain, backward compatible)
-    
+
     /**
      * @notice Resolves a UnifiedId to its primary address (backward compatible - default chain)
      * @dev Returns the primary address associated with the UnifiedId on the default chain
@@ -74,17 +74,17 @@ interface IUnifiedIdResolver {
      * @return The primary address associated with the UnifiedId
      */
     function resolvePrimaryAddressFromUnifiedID(string calldata unifiedId) external view returns (address);
-    
+
     /**
      * @notice Reverse resolves an address to its UnifiedId (backward compatible - default chain)
      * @dev Returns the UnifiedId associated with the address on the default chain
      * @param addr The address to reverse resolve
      * @return The UnifiedId associated with the address
      */
-    function unifiedId(address addr) external view returns (string memory);
+    function resolveUnifiedIDFromAddress(address addr) external view returns (string memory);
 
     // Secondary address management (single-chain)
-    
+
     /**
      * @notice Adds a secondary address to a UnifiedId (single-chain)
      * @dev Associates an additional address with the UnifiedId on the default chain
@@ -96,7 +96,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits SecondaryAddressAdded
      */
     function addSecondaryAddress(string calldata unifiedId, address secondary) external;
-    
+
     /**
      * @notice Removes a secondary address from a UnifiedId (single-chain)
      * @dev Disassociates a secondary address from the UnifiedId on the default chain
@@ -108,7 +108,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits SecondaryAddressRemoved
      */
     function removeSecondaryAddress(string calldata unifiedId, address secondary) external;
-    
+
     /**
      * @notice Checks if an address is a secondary address for a UnifiedId (single-chain)
      * @dev Returns whether the address is registered as secondary for the UnifiedId on default chain
@@ -117,7 +117,7 @@ interface IUnifiedIdResolver {
      * @return True if the address is a secondary address for the UnifiedId
      */
     function isSecondaryAddress(string calldata unifiedId, address addr) external view returns (bool);
-    
+
     /**
      * @notice Gets all secondary addresses for a UnifiedId (single-chain)
      * @dev Returns array of all secondary addresses associated with UnifiedId on default chain
@@ -127,7 +127,7 @@ interface IUnifiedIdResolver {
     function getSecondaryAddresses(string calldata unifiedId) external view returns (address[] memory);
 
     // Admin functions (single-chain)
-    
+
     /**
      * @notice Sets the primary address for a UnifiedId (single-chain admin function)
      * @dev Associates a primary address with the UnifiedId on the default chain
@@ -139,7 +139,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits AddressChanged and UnifiedIdChanged
      */
     function setAddress(string calldata unifiedId, address addr) external;
-    
+
     /**
      * @notice Sets a UnifiedId for an address (single-chain admin function)
      * @dev Associates a UnifiedId with the address on the default chain (reverse mapping)
@@ -151,7 +151,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits AddressChanged and UnifiedIdChanged
      */
     function setUnifiedId(address addr, string calldata unifiedId) external;
-    
+
     /**
      * @notice Clears all records for a UnifiedId (single-chain admin function)
      * @dev Removes all address associations for the UnifiedId on the default chain
@@ -167,7 +167,7 @@ interface IUnifiedIdResolver {
     function clearRecords(string calldata unifiedId) external;
 
     // Multi-chain resolution functions
-    
+
     /**
      * @notice Gets the primary address for a UnifiedId on a specific chain
      * @dev Returns the primary address associated with the UnifiedId on the specified chain
@@ -176,7 +176,7 @@ interface IUnifiedIdResolver {
      * @return The primary address on the specified chain
      */
     function getPrimaryAddress(string calldata unifiedId, uint256 chainId) external view returns (address);
-    
+
     /**
      * @notice Gets the UnifiedId associated with an address on a specific chain
      * @dev Reverse resolves an address to its UnifiedId on the specified chain
@@ -185,7 +185,7 @@ interface IUnifiedIdResolver {
      * @return The UnifiedId associated with the address on the specified chain
      */
     function getUnifiedIdFromAddress(address addr, uint256 chainId) external view returns (string memory);
-    
+
     /**
      * @notice Gets all addresses (primary and secondary) for a UnifiedId on a specific chain
      * @dev Returns both primary and secondary addresses for the UnifiedId on the specified chain
@@ -195,7 +195,7 @@ interface IUnifiedIdResolver {
      * @return secondaries Array of secondary addresses on the specified chain
      */
     function getAddresses(string calldata unifiedId, uint256 chainId) external view returns (address primary, address[] memory secondaries);
-    
+
     /**
      * @notice Checks if an address is associated with a UnifiedId on a specific chain
      * @dev Returns whether the address is primary or secondary for the UnifiedId on the specified chain
@@ -208,7 +208,7 @@ interface IUnifiedIdResolver {
     function isAddressAssociated(string calldata unifiedId, uint256 chainId, address addr) external view returns (bool isPrimary, bool isSecondary);
 
     // Multi-chain management functions
-    
+
     /**
      * @notice Sets the primary address for a UnifiedId on a specific chain
      * @dev Associates a primary address with the UnifiedId on the specified chain
@@ -221,7 +221,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits ChainAddressChanged
      */
     function setUnifiedIdPrimaryAddress(string calldata unifiedId, uint256 chainId, address primary) external;
-    
+
     /**
      * @notice Updates the primary address for a UnifiedId on a specific chain
      * @dev Changes the existing primary address for the UnifiedId on the specified chain
@@ -234,7 +234,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits ChainAddressChanged
      */
     function updateUnifiedIdPrimaryAddress(string calldata unifiedId, uint256 chainId, address newPrimary) external;
-    
+
     /**
      * @notice Adds a secondary address to a UnifiedId on a specific chain
      * @dev Associates an additional address with the UnifiedId on the specified chain
@@ -248,7 +248,7 @@ interface IUnifiedIdResolver {
      * @custom:events Emits ChainSecondaryAddressAdded
      */
     function addUnifiedIdSecondaryAddress(string calldata unifiedId, uint256 chainId, address secondary) external;
-    
+
     /**
      * @notice Removes a secondary address from a UnifiedId on a specific chain
      * @dev Disassociates a secondary address from the UnifiedId on the specified chain
@@ -261,9 +261,9 @@ interface IUnifiedIdResolver {
      * @custom:events Emits ChainSecondaryAddressRemoved
      */
     function removeUnifiedIdSecondaryAddress(string calldata unifiedId, uint256 chainId, address secondary) external;
-    
+
     /**
-     * @notice Clears all address mappings for a UnifiedId on a specific chain
+     * @notice Clear all address mappings for a UnifiedId on a specific chain
      * @dev Removes all address associations for the UnifiedId on the specified chain
      * @param unifiedId The UnifiedId to clear mappings for
      * @param chainId The chain ID to clear mappings on
@@ -277,8 +277,120 @@ interface IUnifiedIdResolver {
      */
     function clearUnifiedIdMappings(string calldata unifiedId, uint256 chainId) external;
 
+    // ==================== SECONDARY ADDRESS RESOLUTION ====================
+
+    /**
+     * @notice Resolves a secondary address to its UnifiedId (single-chain)
+     * @dev Finds which UnifiedId a secondary address belongs to on the default chain
+     * @param secondaryAddr The secondary address to resolve
+     * @return The UnifiedId that the secondary address belongs to, empty string if not found
+     * @custom:gas-optimization Uses efficient lookup without iteration
+     * @custom:use-cases
+     * - Secondary address holders can find their UnifiedId
+     * - DApps can resolve any address type to UnifiedId
+     * - Wallet integrations for secondary address management
+     */
+    function resolveSecondaryAddressToUnifiedId(address secondaryAddr) external view returns (string memory);
+
+    /**
+     * @notice Resolves a secondary address to its UnifiedId on a specific chain
+     * @dev Finds which UnifiedId a secondary address belongs to on the specified chain
+     * @param secondaryAddr The secondary address to resolve
+     * @param chainId The chain ID to query
+     * @return The UnifiedId that the secondary address belongs to, empty string if not found
+     * @custom:gas-optimization Uses efficient lookup without iteration
+     * @custom:multi-chain Supports cross-chain secondary address resolution
+     */
+    function resolveSecondaryAddressToUnifiedId(address secondaryAddr, uint256 chainId) external view returns (string memory);
+
+    /**
+     * @notice Resolves any address (primary or secondary) to its UnifiedId (single-chain)
+     * @dev Universal address resolver that works for both primary and secondary addresses on default chain
+     * @param addr The address to resolve (can be primary or secondary)
+     * @return unifiedId The UnifiedId associated with the address
+     * @return isPrimary True if the address is a primary address
+     * @return isSecondary True if the address is a secondary address
+     * @custom:gas-optimization Checks primary first (most common case), then secondary
+     * @custom:comprehensive Handles all address types in one function call
+     */
+    function resolveAnyAddressToUnifiedId(address addr) external view returns (
+        string memory unifiedId, 
+        bool isPrimary, 
+        bool isSecondary
+    );
+
+    /**
+     * @notice Resolves any address (primary or secondary) to its UnifiedId on a specific chain
+     * @dev Universal address resolver that works for both primary and secondary addresses on specified chain
+     * @param addr The address to resolve (can be primary or secondary)
+     * @param chainId The chain ID to query
+     * @return unifiedId The UnifiedId associated with the address
+     * @return isPrimary True if the address is a primary address
+     * @return isSecondary True if the address is a secondary address
+     * @custom:gas-optimization Checks primary first (most common case), then secondary
+     * @custom:multi-chain Supports cross-chain universal address resolution
+     */
+    function resolveAnyAddressToUnifiedId(address addr, uint256 chainId) external view returns (
+        string memory unifiedId, 
+        bool isPrimary, 
+        bool isSecondary
+    );
+
+    // ==================== COMBINED ADDRESS FUNCTIONS ====================
+
+    /**
+     * @notice Gets all addresses (primary + secondary) for a UnifiedId in a single array (single-chain)
+     * @dev Returns all addresses associated with the UnifiedId on the default chain in one array
+     * @param unifiedId The UnifiedId to get all addresses for
+     * @return allAddresses Array containing primary address followed by all secondary addresses
+     * @custom:gas-optimization Efficient single-call solution instead of multiple calls + concatenation
+     * @custom:use-cases
+     * - DApp integration for displaying all addresses
+     * - Wallet interfaces showing complete address list
+     * - Permission checking across all addresses
+     * - Simplified iteration over all addresses
+     * @custom:array-structure [primary, secondary1, secondary2, ...]
+     */
+    function getAllAddresses(string calldata unifiedId) external view returns (address[] memory allAddresses);
+
+    /**
+     * @notice Gets all addresses (primary + secondary) for a UnifiedId in a single array on specific chain
+     * @dev Returns all addresses associated with the UnifiedId on the specified chain in one array
+     * @param unifiedId The UnifiedId to get all addresses for
+     * @param chainId The chain ID to query
+     * @return allAddresses Array containing primary address followed by all secondary addresses
+     * @custom:gas-optimization Efficient single-call solution for multi-chain scenarios
+     * @custom:multi-chain Supports cross-chain combined address retrieval
+     * @custom:array-structure [primary, secondary1, secondary2, ...]
+     */
+    function getAllAddresses(string calldata unifiedId, uint256 chainId) external view returns (address[] memory allAddresses);
+
+    /**
+     * @notice Gets the total count of addresses (primary + secondary) for a UnifiedId (single-chain)
+     * @dev Returns the total number of addresses associated with the UnifiedId on default chain
+     * @param unifiedId The UnifiedId to count addresses for
+     * @return count Total number of addresses (1 primary + N secondary addresses)
+     * @custom:gas-optimization Lightweight function for getting address count without array allocation
+     * @custom:use-cases
+     * - Pre-allocating arrays for address operations
+     * - Checking if UnifiedId has multiple addresses
+     * - Gas estimation for batch operations
+     */
+    function getAddressCount(string calldata unifiedId) external view returns (uint256 count);
+
+    /**
+     * @notice Gets the total count of addresses (primary + secondary) for a UnifiedId on specific chain
+     * @dev Returns the total number of addresses associated with the UnifiedId on the specified chain
+     * @param unifiedId The UnifiedId to count addresses for
+     * @param chainId The chain ID to query
+     * @return count Total number of addresses (1 primary + N secondary addresses)
+     * @custom:gas-optimization Lightweight function for multi-chain address counting
+     * @custom:multi-chain Supports cross-chain address counting
+     */
+    function getAddressCount(string calldata unifiedId, uint256 chainId) external view returns (uint256 count);
+
     // Authorization
-    
+
     /**
      * @notice Checks if an address is authorized to modify resolver records
      * @dev Returns whether the address has permission to call admin functions
@@ -286,7 +398,7 @@ interface IUnifiedIdResolver {
      * @return True if the address is authorized
      */
     function isAuthorized(address addr) external view returns (bool);
-    
+
     /**
      * @notice Sets authorization status for an address
      * @dev Grants or revokes permission to modify resolver records
@@ -297,4 +409,4 @@ interface IUnifiedIdResolver {
      * @custom:access-control Only owner or authorized registry can call this function
      */
     function setAuthorization(address addr, bool authorized) external;
-} 
+}
