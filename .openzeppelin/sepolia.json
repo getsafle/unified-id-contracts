@@ -25,6 +25,11 @@
       "address": "0x7738a88138DA3CC4F2f360924E93d6ED23458B85",
       "txHash": "0x7282f2d4a6763cae01b7f9dab40e259dfb2bd8d138eeece8747913bd4f7b2c71",
       "kind": "uups"
+    },
+    {
+      "address": "0x00D0E358e022FdD1dD6000D19dEdAD63245468bC",
+      "txHash": "0xa951b902bbff867021c1b427c6f1c2c183a060b2aeae78a7db2e9e9c49647df8",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -346,6 +351,340 @@
           },
           "t_bytes32": {
             "label": "bytes32"
+          },
+          "t_struct(RoleData)71_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_uint64": {
+            "label": "uint64"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "5798b7d33026a04b1455c86b4c9f1c7939ea569e4a557654886396ec0cab1e61": {
+      "address": "0x359439b6FCBD59b75990635959F4cA49e4d4eb53",
+      "txHash": "0x0e689bdc1341f08b2550e81be822c8fdf11d4ff72c8e0de1b55a9d84351bdeda",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:73"
+          },
+          {
+            "label": "_pendingOwner",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:74"
+          },
+          {
+            "label": "config",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_struct(PackedConfig)5608_storage",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:129"
+          },
+          {
+            "label": "totalRegisteredUnifiedIds",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:132"
+          },
+          {
+            "label": "chainId",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:133"
+          },
+          {
+            "label": "util",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_contract(RegistrarStorageUtil)9817",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:135"
+          },
+          {
+            "label": "resolver",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_contract(IUnifiedIdResolver)2617",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:136"
+          },
+          {
+            "label": "registrarAddresses",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:138"
+          },
+          {
+            "label": "registrarNameToAddress",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_bytes32,t_address)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:141"
+          },
+          {
+            "label": "totalRegistrarUpdates",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_mapping(t_address,t_uint8)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:142"
+          },
+          {
+            "label": "userAddresses",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_mapping(t_bytes32,t_struct(UserData)5595_storage)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:143"
+          },
+          {
+            "label": "unavailableUnifiedIds",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_mapping(t_bytes32,t_bool)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:144"
+          },
+          {
+            "label": "registeredUnifiedIds",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_mapping(t_bytes32,t_bool)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:145"
+          },
+          {
+            "label": "resolveAddressFromUnifiedId",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_mapping(t_bytes32,t_address)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:146"
+          },
+          {
+            "label": "resolveUnifiedIdFromAddress",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_mapping(t_address,t_bytes32)",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:147"
+          },
+          {
+            "label": "usedNonces",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_mapping(t_bytes32,t_mapping(t_uint256,t_bool))",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:148"
+          },
+          {
+            "label": "registrarNames",
+            "offset": 0,
+            "slot": "16",
+            "type": "t_array(t_string_storage)dyn_storage",
+            "contract": "RegistrarStorageChildEvents",
+            "src": "contracts/RegistrarStorageChildEvents.sol:150"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_string_storage)dyn_storage": {
+            "label": "string[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IUnifiedIdResolver)2617": {
+            "label": "contract IUnifiedIdResolver",
+            "numberOfBytes": "20"
+          },
+          "t_contract(RegistrarStorageUtil)9817": {
+            "label": "contract RegistrarStorageUtil",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bytes32)": {
+            "label": "mapping(address => bytes32)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint8)": {
+            "label": "mapping(address => uint8)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_address)": {
+            "label": "mapping(bytes32 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_bool)": {
+            "label": "mapping(bytes32 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_mapping(t_uint256,t_bool))": {
+            "label": "mapping(bytes32 => mapping(uint256 => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(UserData)5595_storage)": {
+            "label": "mapping(bytes32 => struct RegistrarStorageChildEvents.UserData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PackedConfig)5608_storage": {
+            "label": "struct RegistrarStorageChildEvents.PackedConfig",
+            "members": [
+              {
+                "label": "maxSecondaryAddresses",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "minUnifiedIdLength",
+                "type": "t_uint8",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "maxUnifiedIdLength",
+                "type": "t_uint8",
+                "offset": 2,
+                "slot": "0"
+              },
+              {
+                "label": "isPaused",
+                "type": "t_bool",
+                "offset": 3,
+                "slot": "0"
+              },
+              {
+                "label": "publicRegistrarRegistration",
+                "type": "t_bool",
+                "offset": 4,
+                "slot": "0"
+              },
+              {
+                "label": "emergencyMode",
+                "type": "t_bool",
+                "offset": 5,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(UserData)5595_storage": {
+            "label": "struct RegistrarStorageChildEvents.UserData",
+            "members": [
+              {
+                "label": "primary",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "isSecondary",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "secondaries",
+                "type": "t_array(t_address)dyn_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
           },
           "t_struct(RoleData)71_storage": {
             "label": "struct AccessControlUpgradeable.RoleData",
