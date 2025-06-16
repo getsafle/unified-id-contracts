@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     struct UserData {
@@ -15,35 +13,43 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bool exists;
     }
     struct Registrar {
-        bool isRegisteredRegistrar;
+        bool isRegistered;
         string registrarName;
         address registrarAddress;
     }
 
-    address public contractOwner;
-    address payable public walletAddress;
-    uint256 public MAX_NAME_UPDATES;
     bool public isPaused;
-    uint256 public totalRegistrars;
     uint256 public totalUnifiedIdRegistered;
     RegistrarStorageUtil public util;
-    address public relayer;
     mapping(address => bool) public authorizedRelayers;
-
-    mapping(address => bool) public isRegisteredRegistrar;
+    mapping(address => bool) public isRegistrarAlreadyRegistered;
     mapping(address => string) public registrarNames;
     mapping(string => address) public registrarNameToAddress;
     mapping(address => uint8) public totalRegistrarUpdates;
-    mapping(address => bytes[]) public resolveOldRegistrarAddress;
-    mapping(address => Registrar) public Registrars;
-
+    address[] public registrarAddresses;
     mapping(string => UserData) private userAddresses;
     mapping(string => bool) public unavailableUnifiedIds;
-    string[] public registeredUnifiedIds;
+    mapping(string => bool) public registeredUnifiedIds;
+    uint256 public totalRegisteredUnifiedIds;
 
     mapping(string => address) public resolveAddressFromUnifiedId;
     mapping(address => bool) public isAddressTaken;
-    mapping(address => string) public resolveUnifiedIdfromAddress;
+    mapping(address => string) public resolveUnifiedIdFromAddress;
+
+    // === ADMIN CONFIGURATION VARIABLES ===
+    uint256 public maxSecondaryAddresses;
+    bool public publicRegistrarRegistration;
+    bool public emergencyMode;
+    mapping(address => bool) public adminUsers;
+    uint256 public maxUnifiedIdLength;
+    uint256 public minUnifiedIdLength;
+
+    // === ADMIN EVENTS ===
+    event MaxSecondaryAddressesUpdated(uint256 oldMax, uint256 newMax);
+    event PublicRegistrarRegistrationToggled(bool enabled);
+    event EmergencyModeToggled(bool enabled);
+    event AdminUserUpdated(address user, bool isAdmin);
+    event UnifiedIdLengthLimitsUpdated(uint256 minLength, uint256 maxLength);
 
     event SecondaryAddressAdded(string unifiedId, address secondary);
     event SecondaryAddressRemoved(string unifiedId, address secondary);
@@ -51,11 +57,9 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     event RegistrarUpdated(address registrar, string oldName, string newName);
     event RegistrationPaused(address by);
     event RegistrationUnpaused(address by);
-    event UnifiedIDRegistered(string unifiedId, address primary);
-    event UnifiedIDUpdated(string unifiedId, address oldPrimary, address newPrimary);
-    event TokenAllowed(address token);
-    event TokenDisallowed(address token);
-    event UnifiedIDChanged(string oldUnifiedId, string newUnifiedId, address primary);
+    event UnifiedIDRegistered(string indexed unifiedId, address indexed primary, uint256 timestamp);
+    event UnifiedIDUpdated(string indexed unifiedId, address indexed oldPrimary, address indexed newPrimary);
+    event UnifiedIDChanged(string indexed oldUnifiedId, string indexed newUnifiedId, address indexed primary, uint256 timestamp);
     event RegisterUnifiedIdInitiated(
         string unifiedId,
         address primaryAddress,
@@ -84,7 +88,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         require(userAddresses[_unifiedId].exists, "UnifiedID does not exist");
         _;
     }
-    modifier WhenNotPaused() {
+    modifier whenNotPaused() {
         require(!isPaused, "Contract is Paused");
         _;
     }
@@ -93,7 +97,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         require(!unavailableUnifiedIds[_unifiedId], "UnifiedID not available");
         _;
     }
-    modifier registrarChecks(string memory _registrarName) {
+    modifier validateRegistrarName(string memory _registrarName) {
         bytes memory regNameBytes = bytes(_registrarName);
         require(registrarNameToAddress[string(regNameBytes)] == address(0x0), "Registrar name is already taken.");
         require(
@@ -103,11 +107,27 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
     modifier onlyRegistrar() {
-        require(isRegisteredRegistrar[msg.sender], "Caller not a registrar");
+        require(isRegistrarAlreadyRegistered[msg.sender], "Caller not a registrar");
         _;
     }
     modifier onlyAuthorizedRelayer() {
         require(authorizedRelayers[msg.sender], "Caller not authorized relayer");
+        _;
+    }
+
+    // === ADMIN MODIFIERS ===
+    modifier onlyAdmin() {
+        require(adminUsers[msg.sender] || msg.sender == owner(), "Caller not admin or owner");
+        _;
+    }
+    
+    modifier notInEmergencyMode() {
+        require(!emergencyMode, "Contract in emergency mode");
+        _;
+    }
+    
+    modifier publicRegistrarAllowed() {
+        require(publicRegistrarRegistration || msg.sender == owner() || adminUsers[msg.sender], "Public registrar registration disabled");
         _;
     }
 
@@ -116,8 +136,15 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function initialize(address _RegistrarStorageUtil) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        MAX_NAME_UPDATES = 3;
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
+        
+        // === ADMIN DEFAULTS ===
+        maxSecondaryAddresses = 10;
+        publicRegistrarRegistration = false;
+        emergencyMode = false;
+        adminUsers[msg.sender] = true;
+        maxUnifiedIdLength = 16;
+        minUnifiedIdLength = 4;
     }
 
     function setUtilImplementation(address _RegistrarStorageUtil) external onlyOwner {
@@ -131,46 +158,23 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function registerRegistrar(
         string calldata _registrarName,
         address _registrarAddress
-    ) external payable WhenNotPaused registrarChecks(_registrarName) onlyOwner returns (bool) {
+    ) external payable whenNotPaused validateRegistrarName(_registrarName) publicRegistrarAllowed notInEmergencyMode returns (bool) {
         require(!isAddressTaken[_registrarAddress], "This address is already registered.");
-        Registrars[_registrarAddress] = Registrar({
-            isRegisteredRegistrar: true,
-            registrarName: _registrarName,
-            registrarAddress: _registrarAddress
-        });
         registrarNameToAddress[_registrarName] = _registrarAddress;
         registrarNames[_registrarAddress] = _registrarName;
-        isRegisteredRegistrar[_registrarAddress] = true;
+        isRegistrarAlreadyRegistered[_registrarAddress] = true;
         isAddressTaken[_registrarAddress] = true;
-        totalRegistrars++;
+        registrarAddresses.push(_registrarAddress);
         emit RegistrarRegistered(_registrarAddress, _registrarName);
         return true;
     }
 
-    function updateRegistrar(
-        address _registrar,
-        string calldata _newRegistrarName
-    ) external WhenNotPaused registrarChecks(_newRegistrarName) onlyOwner returns (bool) {
-        require(isAddressTaken[_registrar], "Registrar should register first.");
-        require(totalRegistrarUpdates[_registrar] + 1 <= MAX_NAME_UPDATES, "Maximum update count reached.");
-        Registrar storage registrarObject = Registrars[_registrar];
-        string memory oldName = registrarObject.registrarName;
-        registrarNameToAddress[oldName] = address(0x0);
-        resolveOldRegistrarAddress[_registrar].push(bytes(registrarObject.registrarName));
-        registrarNames[_registrar] = _newRegistrarName;
-        registrarObject.registrarName = _newRegistrarName;
-        registrarNameToAddress[_newRegistrarName] = _registrar;
-        totalRegistrarUpdates[_registrar]++;
-        emit RegistrarUpdated(_registrar, oldName, _newRegistrarName);
-        return true;
-    }
-
-    function PauseRegistration() external onlyOwner {
+    function pauseRegistration() external onlyOwner {
         isPaused = true;
         emit RegistrationPaused(msg.sender);
     }
 
-    function unPauseRegistration() external onlyOwner {
+    function unpauseRegistration() external onlyOwner {
         isPaused = false;
         emit RegistrationUnpaused(msg.sender);
     }
@@ -181,8 +185,8 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _masterSignature,
         bytes calldata _primarySignature,
         bytes calldata _options
-    ) external payable WhenNotPaused onlyRegistrar returns (bool) {
-        require(util.isSafleIdValid(_unifiedId), "Invalid UnifiedId format");
+    ) external payable whenNotPaused onlyRegistrar returns (bool) {
+        require(util.isUnifiedIdValid(_unifiedId), "Invalid UnifiedId format");
         require(!userAddresses[_unifiedId].exists, "UnifiedID already exists");
         require(!unavailableUnifiedIds[_unifiedId], "UnifiedID not available");
         require(registrarNameToAddress[_unifiedId] == address(0x0), "This UnifiedId is taken by a Registrar.");
@@ -194,16 +198,17 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function completeRegisterUnifiedId(
         string calldata _unifiedId,
         address _primaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         userData.primary = _primaryAddress;
         userData.exists = true;
         resolveAddressFromUnifiedId[_unifiedId] = _primaryAddress;
-        resolveUnifiedIdfromAddress[_primaryAddress] = _unifiedId;
-        registeredUnifiedIds.push(_unifiedId);
+        resolveUnifiedIdFromAddress[_primaryAddress] = _unifiedId;
+        registeredUnifiedIds[_unifiedId] = true;
+        totalRegisteredUnifiedIds++;
         unavailableUnifiedIds[_unifiedId] = true;
         totalUnifiedIdRegistered++;
-        emit UnifiedIDRegistered(_unifiedId, _primaryAddress);
+        emit UnifiedIDRegistered(_unifiedId, _primaryAddress, block.timestamp);
         return true;
     }
 
@@ -215,13 +220,13 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     )
         external
         payable
-        WhenNotPaused
+        whenNotPaused
         unifiedIdExists(_oldUnifiedId)
         unifiedIdDoesNotExist(_newUnifiedId)
         onlyRegistrar
         returns (bool)
     {
-        require(util.isSafleIdValid(_newUnifiedId), "Invalid new UnifiedId format");
+        require(util.isUnifiedIdValid(_newUnifiedId), "Invalid new UnifiedId format");
         emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, _signature, _options);
         return true;
     }
@@ -229,43 +234,51 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function completeUpdateUnifiedId(
         string memory _oldUnifiedId,
         string memory _newUnifiedId
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+        require(registeredUnifiedIds[_oldUnifiedId], "Old UnifiedID not found");
+        require(!registeredUnifiedIds[_newUnifiedId], "New UnifiedID already exists");
+        
         UserData storage userData = userAddresses[_oldUnifiedId];
-        resolveAddressFromUnifiedId[_newUnifiedId] = userData.primary;
-        resolveAddressFromUnifiedId[_oldUnifiedId] = address(0);
-        resolveUnifiedIdfromAddress[userData.primary] = _newUnifiedId;
+        address primaryAddress = userData.primary;
+        
+        // Update address mappings
+        resolveAddressFromUnifiedId[_newUnifiedId] = primaryAddress;
+        delete resolveAddressFromUnifiedId[_oldUnifiedId];
+        resolveUnifiedIdFromAddress[primaryAddress] = _newUnifiedId;
 
+        // Copy user data to new unified ID
         UserData storage newUserData = userAddresses[_newUnifiedId];
-        newUserData.primary = userData.primary;
+        newUserData.primary = primaryAddress;
         newUserData.exists = true;
 
+        // Copy secondary addresses
         for (uint i = 0; i < userData.secondaries.length; i++) {
             address secondaryAddr = userData.secondaries[i];
             newUserData.isSecondary[secondaryAddr] = true;
             newUserData.secondaries.push(secondaryAddr);
         }
 
-        for (uint i = 0; i < registeredUnifiedIds.length; i++) {
-            if (keccak256(bytes(registeredUnifiedIds[i])) == keccak256(bytes(_oldUnifiedId))) {
-                registeredUnifiedIds[i] = _newUnifiedId;
-                break;
-            }
-        }
-
+        delete registeredUnifiedIds[_oldUnifiedId];
+        registeredUnifiedIds[_newUnifiedId] = true;
+        
+        // Mark as unavailable
         unavailableUnifiedIds[_oldUnifiedId] = true;
         unavailableUnifiedIds[_newUnifiedId] = true;
+        
+        // Clean up old user data
         delete userAddresses[_oldUnifiedId];
-        emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, userData.primary);
+        
+        emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, primaryAddress, block.timestamp);
         return true;
     }
 
-    function initiateUpdateUnifiedIdPrimaryAddress(
+    function initiatePrimaryAddressChange(
         string calldata _unifiedId,
         address _newPrimaryAddress,
         bytes calldata currentPrimarySignature,
         bytes calldata newPrimarySignature,
         bytes calldata _options
-    ) external payable WhenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
+    ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         emit UpdateUnifiedIdPrimaryAddressInitiated(
             _unifiedId,
             _newPrimaryAddress,
@@ -276,16 +289,16 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         return true;
     }
 
-    function completeUpdateUnifiedIdPrimaryAddress(
+    function finalizePrimaryAddressChange(
         string calldata _unifiedId,
         address _newPrimaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         address oldPrimary = userData.primary;
         userData.primary = _newPrimaryAddress;
         resolveAddressFromUnifiedId[_unifiedId] = _newPrimaryAddress;
-        resolveUnifiedIdfromAddress[_newPrimaryAddress] = _unifiedId;
-        resolveUnifiedIdfromAddress[oldPrimary] = "";
+        resolveUnifiedIdFromAddress[_newPrimaryAddress] = _unifiedId;
+        resolveUnifiedIdFromAddress[oldPrimary] = "";
         emit UnifiedIDUpdated(_unifiedId, oldPrimary, _newPrimaryAddress);
         return true;
     }
@@ -296,9 +309,10 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata _primarySignature,
         bytes calldata _secondarySignature,
         bytes calldata _options
-    ) external payable WhenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
+    ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         require(!userData.isSecondary[_secondaryAddress], "Secondary address already added");
+        require(userData.secondaries.length < maxSecondaryAddresses, "Maximum secondary addresses limit reached");
         emit AddSecondaryAddressInitiated(
             _unifiedId,
             _secondaryAddress,
@@ -312,7 +326,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function completeAddSecondaryAddress(
         string calldata _unifiedId,
         address _secondaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         userData.isSecondary[_secondaryAddress] = true;
         userData.secondaries.push(_secondaryAddress);
@@ -325,7 +339,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         address _secondaryAddress,
         bytes calldata _signature,
         bytes calldata _options
-    ) external payable WhenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
+    ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         emit RemoveSecondaryAddressInitiated(_unifiedId, _secondaryAddress, _signature, _options);
         return true;
     }
@@ -333,7 +347,7 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
     function completeRemoveSecondaryAddress(
         string calldata _unifiedId,
         address _secondaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
         UserData storage userData = userAddresses[_unifiedId];
         userData.isSecondary[_secondaryAddress] = false;
         for (uint i = 0; i < userData.secondaries.length; i++) {
@@ -363,7 +377,184 @@ contract RegistrarStorageChildEvents is UUPSUpgradeable, OwnableUpgradeable {
         return userAddresses[_unifiedId].secondaries;
     }
 
-    function getRegisteredUnifiedIds() external view returns (string[] memory) {
-        return registeredUnifiedIds;
+    function isRegisteredUnifiedId(string calldata unifiedId) external view returns (bool) {
+        return registeredUnifiedIds[unifiedId];
+    }
+
+    function getTotalRegisteredUnifiedIds() external view returns (uint256) {
+        return totalRegisteredUnifiedIds;
+    }
+
+    // === ADMIN FUNCTIONS ===
+    
+    /**
+     * @notice Set maximum number of secondary addresses per unified ID
+     * @param _maxSecondaryAddresses New maximum limit
+     */
+    function setMaxSecondaryAddresses(uint256 _maxSecondaryAddresses) external onlyOwner {
+        uint256 oldMax = maxSecondaryAddresses;
+        maxSecondaryAddresses = _maxSecondaryAddresses;
+        emit MaxSecondaryAddressesUpdated(oldMax, _maxSecondaryAddresses);
+    }
+    
+    /**
+     * @notice Enable/disable registrar registration
+     * @param _enabled True to enable public registration, false to restrict to admin only
+     */
+    function setRegistrarRegistrationPermission(bool _enabled) external onlyOwner {
+        publicRegistrarRegistration = _enabled;
+        emit PublicRegistrarRegistrationToggled(_enabled);
+    }
+    
+    /**
+     * @notice Toggle emergency mode - stops all operations except admin functions
+     * @param _enabled True to enable emergency mode, false to disable
+     */
+    function setEmergencyMode(bool _enabled) external onlyOwner {
+        emergencyMode = _enabled;
+        emit EmergencyModeToggled(_enabled);
+    }
+    
+    /**
+     * @notice Add or remove admin user
+     * @param _user Address to modify admin status
+     * @param _isAdmin True to grant admin rights, false to revoke
+     */
+    function setAdminUser(address _user, bool _isAdmin) external onlyOwner {
+        require(_user != address(0), "User cannot be zero address");
+        adminUsers[_user] = _isAdmin;
+        emit AdminUserUpdated(_user, _isAdmin);
+    }
+
+    
+    /**
+     * @notice Set unified ID length limits
+     * @param _minLength Minimum length for unified IDs
+     * @param _maxLength Maximum length for unified IDs
+     */
+    function setUnifiedIdLengthLimits(uint256 _minLength, uint256 _maxLength) external onlyOwner {
+        require(_minLength > 0 && _maxLength > _minLength, "Invalid length limits");
+        minUnifiedIdLength = _minLength;
+        maxUnifiedIdLength = _maxLength;
+        emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
+    }
+    
+    /**
+     * @notice Emergency function to mark unified ID as unavailable
+     * @param _unifiedId Unified ID to mark as unavailable
+     */
+    function emergencyMarkUnavailable(string calldata _unifiedId) external onlyAdmin {
+        unavailableUnifiedIds[_unifiedId] = true;
+    }
+    
+    /**
+     * @notice Emergency function to mark unified ID as available
+     * @param _unifiedId Unified ID to mark as available
+     */
+    function emergencyMarkAvailable(string calldata _unifiedId) external onlyAdmin {
+        unavailableUnifiedIds[_unifiedId] = false;
+    }
+    
+    /**
+     * @notice Emergency function to remove registrar
+     * @param _registrarAddress Address of registrar to remove
+     */
+    function emergencyRemoveRegistrar(address _registrarAddress) external onlyAdmin {
+        require(isRegistrarAlreadyRegistered[_registrarAddress], "Address is not a registrar");
+        string memory registrarName = registrarNames[_registrarAddress];
+
+        isRegistrarAlreadyRegistered[_registrarAddress] = false;
+        isAddressTaken[_registrarAddress] = false;
+        registrarNameToAddress[registrarName] = address(0);
+        delete registrarNames[_registrarAddress];
+        
+        // Remove from registrarAddresses array
+        for (uint i = 0; i < registrarAddresses.length; i++) {
+            if (registrarAddresses[i] == _registrarAddress) {
+                registrarAddresses[i] = registrarAddresses[registrarAddresses.length - 1];
+                registrarAddresses.pop();
+                break;
+            }
+        }
+    }
+    
+
+    
+    /**
+     * @notice Get contract configuration
+     * @return Configuration struct with all admin-controlled parameters
+     */
+    function getConfiguration() external view returns (
+        uint256 _maxSecondaryAddresses,
+        bool _publicRegistrarRegistration,
+        bool _emergencyMode,
+        uint256 _minUnifiedIdLength,
+        uint256 _maxUnifiedIdLength
+    ) {
+        return (
+            maxSecondaryAddresses,
+            publicRegistrarRegistration,
+            emergencyMode,
+            minUnifiedIdLength,
+            maxUnifiedIdLength
+        );
+    }
+
+    // === REGISTRAR ENUMERATION FUNCTIONS ===
+    
+    /**
+     * @notice Get all registered registrar addresses
+     * @return Array of all registrar addresses
+     */
+    function getAllRegistrars() external view returns (address[] memory) {
+        return registrarAddresses;
+    }
+    
+    /**
+     * @notice Get all registrars with their names
+     * @return addresses Array of registrar addresses
+     * @return names Array of corresponding registrar names
+     */
+    function getAllRegistrarsWithNames() external view returns (address[] memory addresses, string[] memory names) {
+        uint256 length = registrarAddresses.length;
+        addresses = new address[](length);
+        names = new string[](length);
+        
+        for (uint i = 0; i < length; i++) {
+            addresses[i] = registrarAddresses[i];
+            names[i] = registrarNames[registrarAddresses[i]];
+        }
+        
+        return (addresses, names);
+    }
+
+    
+    /**
+     * @notice Get total number of registered registrars
+     * @return Total count of registrars
+     */
+    function getTotalRegistrars() external view returns (uint256) {
+        return registrarAddresses.length;
+    }
+    
+
+    
+    /**
+     * @notice Check if an address is a registrar and get its details
+     * @param _address Address to check
+     * @return isRegistrar True if address is a registrar
+     * @return registrarName Name of the registrar (empty if not a registrar)
+     * @return updateCount Number of updates (0 if not a registrar)
+     */
+    function getRegistrarInfo(address _address) external view returns (
+        bool isRegistrar,
+        string memory registrarName,
+        uint8 updateCount
+    ) {
+        return (
+            isRegistrarAlreadyRegistered[_address],
+            registrarNames[_address],
+            totalRegistrarUpdates[_address]
+        );
     }
 }

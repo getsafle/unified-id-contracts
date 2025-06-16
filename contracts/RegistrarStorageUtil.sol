@@ -10,20 +10,38 @@ contract RegistrarStorageUtil {
     address public owner;
     string constant PREFIX = "\x19Ethereum Signed Message:\n32";
     
+    // === ADMIN CONFIGURATION VARIABLES ===
+    uint8 public maxUnifiedIdLength;
+    uint8 public minUnifiedIdLength;
+    mapping(address => bool) public adminUsers;
+    
+    // === ADMIN EVENTS ===
+    event UnifiedIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
+    event AdminUserUpdated(address user, bool isAdmin);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    
     // Events
     event TokenPriceFeedSet(address indexed token, address indexed priceFeed);
     event EthPriceFeedSet(address indexed priceFeed);
-    event RegistrarStorageSet(address indexed newRegistrarStorage);
     
  
     constructor() {
-        owner = msg.sender;      
+        owner = msg.sender;
+        adminUsers[msg.sender] = true;
+        maxUnifiedIdLength = 16;
+        minUnifiedIdLength = 4;
     }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller is not the owner");
         _;
     }
+    
+    modifier onlyAdmin() {
+        require(adminUsers[msg.sender] || msg.sender == owner, "Caller not admin or owner");
+        _;
+    }
+
     function setTokenPriceFeed(address token, address priceFeed, uint decimal) external onlyOwner {
         tokenPriceFeed[token] = priceFeed;
         tokenDecimal[token] = decimal;
@@ -133,8 +151,8 @@ contract RegistrarStorageUtil {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
-        uint8 constant MAX_SAFLEID_LENGTH = 16;
-    uint8 constant MIN_SAFLEID_LENGTH = 4;
+        uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
+    uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
     /**
     * @dev  check if address is of wallet or contract 
@@ -183,11 +201,11 @@ contract RegistrarStorageUtil {
 
     /**
     * @dev  to check if string contains alphanumeric or ASCII characters
-    * @param safleId string to be checked
+    * @param unifiedId string to be checked
     */
 
-    function checkAlphaNumericandASCII(string memory safleId) public pure returns (bool) {
-        bytes memory b = bytes(safleId);
+    function checkAlphaNumericAndAscii(string memory unifiedId) public pure returns (bool) {
+        bytes memory b = bytes(unifiedId);
         
         for(uint i; i < b.length; i++) {
             bytes1 char = b[i];
@@ -205,13 +223,63 @@ contract RegistrarStorageUtil {
         return true;
     }   
     
-    function isSafleIdValid (string memory _registrarName) public pure returns (bool){
-        
-        string memory VNinLowerCase = toLower(_registrarName);
+    function unifiedIdValid(string memory _registrarName) public view returns (bool) {
+        string memory nameInLowerCase = toLower(_registrarName);
         uint8 length = checkLength(_registrarName);
-        require(checkAlphaNumericandASCII(VNinLowerCase),"only alphanumeric allowed");
-        require(length <= MAX_SAFLEID_LENGTH && length >= MIN_SAFLEID_LENGTH,"SafleId length should be between 4-16 characters");
+        require(checkAlphaNumericAndAscii(nameInLowerCase), "only alphanumeric allowed");
+        require(length <= maxUnifiedIdLength && length >= minUnifiedIdLength, "Unified Id length out of bounds");
         return true;
+    }
 
+    // === ADMIN FUNCTIONS ===
+    
+    /**
+     * @notice Set UnifiedId length limits
+     * @param _minLength Minimum length for unifiedId
+     * @param _maxLength Maximum length for unifiedId
+     */
+    function setUnifiedIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyOwner {
+        require(_minLength > 0 && _maxLength > _minLength, "Invalid length limits");
+        minUnifiedIdLength = _minLength;
+        maxUnifiedIdLength = _maxLength;
+        emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
+    }
+    
+    /**
+     * @notice Add or remove admin user
+     * @param _user Address to modify admin status
+     * @param _isAdmin True to grant admin rights, false to revoke
+     */
+    function setAdminUser(address _user, bool _isAdmin) external onlyOwner {
+        require(_user != address(0), "User cannot be zero address");
+        adminUsers[_user] = _isAdmin;
+        emit AdminUserUpdated(_user, _isAdmin);
+    }
+    
+    /**
+     * @notice Transfer ownership of the contract
+     * @param _newOwner Address of the new owner
+     */
+    function transferOwnership(address _newOwner) external onlyOwner {
+        require(_newOwner != address(0), "New owner cannot be zero address");
+        emit OwnershipTransferred(owner, _newOwner);
+        owner = _newOwner;
+        adminUsers[_newOwner] = true;
+    }
+    
+    /**
+     * @notice Get configuration parameters
+     * @return Configuration values
+     */
+    function getConfiguration() external view returns (
+        uint8 _minUnifiedIdLength,
+        uint8 _maxUnifiedIdIdLength,
+        address _owner
+    ) {
+        return (
+            minUnifiedIdLength,
+            maxUnifiedIdLength,
+            owner
+        );
     }
 }
