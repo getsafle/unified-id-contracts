@@ -2,27 +2,40 @@
 pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title RegistrarStorageUtil
  * @author kunalmkv
- * @notice Utility contract for price feeds, signature verification, and admin management
- * @dev Implements secure signature verification with EIP-712, price feed management, and two-step ownership
+ * @notice Utility contract for price feeds, signature verification, and admin management with role-based access control
+ * @dev Implements secure signature verification with EIP-712, price feed management, two-step ownership, and OpenZeppelin AccessControl
  */
-contract RegistrarStorageUtil {
+contract RegistrarStorageUtil is AccessControl {
+    
+    // ==================== ROLE DEFINITIONS ====================
+    
+    /// @notice Role for admin users with elevated privileges
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
+    /// @notice Role for price feed managers
+    bytes32 public constant PRICE_FEED_MANAGER_ROLE = keccak256("PRICE_FEED_MANAGER_ROLE");
+    
+    /// @notice Role for configuration managers
+    bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
+
     /// @notice Mapping of token addresses to their corresponding Chainlink price feed addresses
     mapping(address => address) public tokenPriceFeed;
-    
+
     /// @notice Mapping of token addresses to their decimal precision
     mapping(address => uint256) public tokenDecimal;
-    
+
     /// @notice Address of ETH/USD Chainlink price feed
     address public ethPriceFeed;
-    
+
     // === OWNABLE2STEP IMPLEMENTATION ===
     /// @dev Address of the current contract owner
     address private _owner;
-    
+
     /// @dev Address of the pending owner during ownership transfer
     address private _pendingOwner;
 
@@ -32,36 +45,26 @@ contract RegistrarStorageUtil {
     // === ADMIN CONFIGURATION VARIABLES ===
     /// @notice Maximum allowed length for unified IDs
     uint8 public maxUnifiedIdLength;
-    
+
     /// @notice Minimum required length for unified IDs
     uint8 public minUnifiedIdLength;
-    
-    /// @notice Mapping of admin user addresses
-    mapping(address => bool) public adminUsers;
 
     // === ADMIN EVENTS ===
-    
+
     /**
      * @notice Emitted when unified ID length limits are updated
      * @param minLength New minimum length requirement
      * @param maxLength New maximum length requirement
      */
     event UnifiedIdLengthLimitsUpdated(uint8 minLength, uint8 maxLength);
-    
-    /**
-     * @notice Emitted when admin user status is updated
-     * @param user Address whose admin status was modified
-     * @param isAdmin True if granted admin rights, false if revoked
-     */
-    event AdminUserUpdated(address user, bool isAdmin);
-    
+
     /**
      * @notice Emitted when ownership transfer is initiated
      * @param previousOwner Current owner who initiated the transfer
      * @param newOwner Address that will become the new owner
      */
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-    
+
     /**
      * @notice Emitted when ownership transfer is completed
      * @param previousOwner Previous owner address
@@ -70,14 +73,14 @@ contract RegistrarStorageUtil {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // Events
-    
+
     /**
      * @notice Emitted when a token price feed is configured
      * @param token Token address for which price feed was set
      * @param priceFeed Chainlink price feed address
      */
     event TokenPriceFeedSet(address indexed token, address indexed priceFeed);
-    
+
     /**
      * @notice Emitted when ETH price feed is configured
      * @param priceFeed Chainlink ETH/USD price feed address
@@ -85,7 +88,7 @@ contract RegistrarStorageUtil {
     event EthPriceFeedSet(address indexed priceFeed);
 
     // === MISSING CRITICAL EVENTS ===
-    
+
     /**
      * @notice Emitted when token decimal precision is updated
      * @param token Token address whose decimal was updated
@@ -95,14 +98,20 @@ contract RegistrarStorageUtil {
     event TokenDecimalUpdated(address indexed token, uint256 oldDecimal, uint256 newDecimal);
 
     /**
-     * @notice Constructor initializes the contract with default values
-     * @dev Sets deployer as owner and admin, establishes default unified ID length limits
+     * @notice Constructor initializes the contract with default values and role-based access control
+     * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
      */
     constructor() {
         _owner = msg.sender;
-        adminUsers[msg.sender] = true;
         maxUnifiedIdLength = 16;
         minUnifiedIdLength = 4;
+        
+        // Setup roles
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _grantRole(PRICE_FEED_MANAGER_ROLE, msg.sender);
+        _grantRole(CONFIG_MANAGER_ROLE, msg.sender);
+        
         emit OwnershipTransferred(address(0), msg.sender);
     }
 
@@ -136,7 +145,7 @@ contract RegistrarStorageUtil {
      * @dev Reverts if caller is neither admin nor owner
      */
     modifier onlyAdmin() {
-        require(adminUsers[msg.sender] || msg.sender == owner(), "Caller not admin or owner");
+        require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not admin or owner");
         _;
     }
 
@@ -189,7 +198,9 @@ contract RegistrarStorageUtil {
         address oldOwner = _owner;
         _owner = newOwner;
         if (newOwner != address(0)) {
-            adminUsers[newOwner] = true;
+            _grantRole(ADMIN_ROLE, newOwner);
+            _grantRole(PRICE_FEED_MANAGER_ROLE, newOwner);
+            _grantRole(CONFIG_MANAGER_ROLE, newOwner);
         }
         emit OwnershipTransferred(oldOwner, newOwner);
     }
@@ -201,21 +212,21 @@ contract RegistrarStorageUtil {
      * @param priceFeed Address of the Chainlink price feed for this token
      * @param decimal Decimal precision for the token
      * @custom:requirements
-     * - Only owner can call this function
+     * - Only price feed manager can call this function
      * - token cannot be zero address
      * - priceFeed cannot be zero address
      * @custom:events
      * - Emits TokenPriceFeedSet
      * - Emits TokenDecimalUpdated if decimal value changed
      */
-    function setTokenPriceFeed(address token, address priceFeed, uint decimal) external onlyOwner {
+    function setTokenPriceFeed(address token, address priceFeed, uint256 decimal) external onlyRole(PRICE_FEED_MANAGER_ROLE) {
         require(token != address(0), "Token: zero address");
         require(priceFeed != address(0), "Price feed: zero address");
-        
+
         uint256 oldDecimal = tokenDecimal[token];
         tokenPriceFeed[token] = priceFeed;
         tokenDecimal[token] = decimal;
-        
+
         emit TokenPriceFeedSet(token, priceFeed);
         if (oldDecimal != decimal) {
             emit TokenDecimalUpdated(token, oldDecimal, decimal);
@@ -227,12 +238,12 @@ contract RegistrarStorageUtil {
      * @dev Configures the Chainlink ETH/USD price feed for ETH price calculations
      * @param _ethPriceFeed Address of the Chainlink ETH/USD price feed
      * @custom:requirements
-     * - Only owner can call this function
+     * - Only price feed manager can call this function
      * - _ethPriceFeed cannot be zero address
      * @custom:events
      * - Emits EthPriceFeedSet
      */
-    function setEthPriceFeed(address _ethPriceFeed) external onlyOwner {
+    function setEthPriceFeed(address _ethPriceFeed) external onlyRole(PRICE_FEED_MANAGER_ROLE) {
         require(_ethPriceFeed != address(0), "ETH price feed: zero address");
         ethPriceFeed = _ethPriceFeed;
         emit EthPriceFeedSet(_ethPriceFeed);
@@ -297,7 +308,7 @@ contract RegistrarStorageUtil {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenPriceFeed[token]);
         (
             ,
-            int answer,
+            int256 answer,
             ,
             ,
         ) = priceFeed.latestRoundData();
@@ -308,7 +319,7 @@ contract RegistrarStorageUtil {
         AggregatorV3Interface ethPriceAggregator = AggregatorV3Interface(ethPriceFeed);
         (
             ,
-            int ethAnswer,
+            int256 ethAnswer,
             ,
             ,
         ) = ethPriceAggregator.latestRoundData();
@@ -511,10 +522,10 @@ contract RegistrarStorageUtil {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
-    
+
     /// @notice Deprecated constant: Maximum allowed unified ID length
     uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
-    
+
     /// @notice Deprecated constant: Minimum required unified ID length  
     uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
@@ -544,7 +555,7 @@ contract RegistrarStorageUtil {
     function toLower(string memory str) public pure returns (string memory) {
         bytes memory bStr = bytes(str);
         bytes memory bLower = new bytes(bStr.length);
-        for (uint i = 0; i < bStr.length; ++i) {
+        for (uint256 i = 0; i < bStr.length; ++i) {
             // Uppercase character...
             if ((uint8(bStr[i]) >= 65) && (uint8(bStr[i]) <= 90)) {
                 // So we add 32 to make it lowercase
@@ -582,7 +593,7 @@ contract RegistrarStorageUtil {
     function checkAlphaNumericAndAscii(string memory unifiedId) public pure returns (bool) {
         bytes memory b = bytes(unifiedId);
 
-        for(uint i; i < b.length; ++i) {
+        for(uint256 i; i < b.length; ++i) {
             bytes1 char = b[i];
 
             if(!(
@@ -628,20 +639,97 @@ contract RegistrarStorageUtil {
         return unifiedIdValid(_unifiedId);
     }
 
+    // ==================== ROLE MANAGEMENT FUNCTIONS ====================
+    
+    /**
+     * @notice Grant admin role to an address
+     * @param admin Address to grant admin role
+     */
+    function grantAdminRole(address admin) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(ADMIN_ROLE, admin);
+    }
+
+    /**
+     * @notice Revoke admin role from an address
+     * @param admin Address to revoke admin role
+     */
+    function revokeAdminRole(address admin) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(ADMIN_ROLE, admin);
+    }
+
+    /**
+     * @notice Grant price feed manager role to an address
+     * @param manager Address to grant price feed manager role
+     */
+    function grantPriceFeedManagerRole(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(PRICE_FEED_MANAGER_ROLE, manager);
+    }
+
+    /**
+     * @notice Revoke price feed manager role from an address
+     * @param manager Address to revoke price feed manager role
+     */
+    function revokePriceFeedManagerRole(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(PRICE_FEED_MANAGER_ROLE, manager);
+    }
+
+    /**
+     * @notice Grant config manager role to an address
+     * @param manager Address to grant config manager role
+     */
+    function grantConfigManagerRole(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(CONFIG_MANAGER_ROLE, manager);
+    }
+
+    /**
+     * @notice Revoke config manager role from an address
+     * @param manager Address to revoke config manager role
+     */
+    function revokeConfigManagerRole(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(CONFIG_MANAGER_ROLE, manager);
+    }
+
+    /**
+     * @notice Check if address has admin role
+     * @param account Address to check
+     * @return True if address has admin role
+     */
+    function isAdmin(address account) external view returns (bool) {
+        return hasRole(ADMIN_ROLE, account);
+    }
+
+    /**
+     * @notice Check if address has price feed manager role
+     * @param account Address to check
+     * @return True if address has price feed manager role
+     */
+    function isPriceFeedManager(address account) external view returns (bool) {
+        return hasRole(PRICE_FEED_MANAGER_ROLE, account);
+    }
+
+    /**
+     * @notice Check if address has config manager role
+     * @param account Address to check
+     * @return True if address has config manager role
+     */
+    function isConfigManager(address account) external view returns (bool) {
+        return hasRole(CONFIG_MANAGER_ROLE, account);
+    }
+
     // === ADMIN FUNCTIONS ===
 
     /**
      * @notice Sets the length limits for unified IDs
-          * @dev Updates both minimum and maximum length requirements
+     * @dev Updates both minimum and maximum length requirements
      * @param _minLength Minimum allowed length for unified IDs
      * @param _maxLength Maximum allowed length for unified IDs
      * @custom:requirements
-     * - Only owner can call this function
+     * - Only config manager can call this function
      * - _minLength must be greater than 0
      * - _maxLength must be greater than _minLength
      * @custom:events Emits UnifiedIdLengthLimitsUpdated
      */
-    function setUnifiedIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyOwner {
+    function setUnifiedIdLengthLimits(uint8 _minLength, uint8 _maxLength) external onlyRole(CONFIG_MANAGER_ROLE) {
         require(_minLength != 0 && _maxLength > _minLength, "Invalid length limits");
         minUnifiedIdLength = _minLength;
         maxUnifiedIdLength = _maxLength;
@@ -649,32 +737,16 @@ contract RegistrarStorageUtil {
     }
 
     /**
-     * @notice Grants or revokes admin privileges for a user
-     * @dev Updates admin status and emits appropriate event
-     * @param _user Address to modify admin status for
-     * @param _isAdmin True to grant admin rights, false to revoke
-     * @custom:requirements
-     * - Only owner can call this function
-     * - _user cannot be zero address
-     * @custom:events Emits AdminUserUpdated
-     */
-    function setAdminUser(address _user, bool _isAdmin) external onlyOwner {
-        require(_user != address(0), "User cannot be zero address");
-        adminUsers[_user] = _isAdmin;
-        emit AdminUserUpdated(_user, _isAdmin);
-    }
-
-    /**
      * @notice Returns current contract configuration
      * @dev Provides read access to key configuration parameters
      * @return _minUnifiedIdLength Current minimum unified ID length
-     * @return _maxUnifiedIdIdLength Current maximum unified ID length  
-     * @return _owner Current contract owner address
+     * @return _maxUnifiedIdIdLength Current maximum unified ID length
+     * @return currentOwner Current contract owner address
      */
     function getConfiguration() external view returns (
         uint8 _minUnifiedIdLength,
         uint8 _maxUnifiedIdIdLength,
-        address _owner
+        address currentOwner
     ) {
         return (
             minUnifiedIdLength,
