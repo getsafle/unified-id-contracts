@@ -1,0 +1,3872 @@
+{
+  "version": "3.4",
+  "log": [
+    {
+      "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol:AggregatorV3Interface": {
+        "src": "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol:5",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "decimals()",
+          "description()",
+          "version()",
+          "getRoundData(uint80)",
+          "latestRoundData()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:50",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)",
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_bytes32": {
+              "label": "bytes32"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)"
+            },
+            "t_address": {
+              "label": "address"
+            },
+            "t_bool": {
+              "label": "bool"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable": {
+        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:56",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:20",
+        "inherit": [
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [
+          "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils"
+        ],
+        "methods": [
+          "proxiableUUID()",
+          "upgradeToAndCall(address,bytes)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:17",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:PausableUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:18",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "paused()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_bool": {
+              "label": "bool"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Pausable": [
+              {
+                "contract": "PausableUpgradeable",
+                "label": "_paused",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:21",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/access/AccessControl.sol:AccessControl": {
+        "src": "@openzeppelin/contracts/access/AccessControl.sol:49",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts/utils/Context.sol:Context"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)",
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_roles",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)",
+              "contract": "AccessControl",
+              "src": "@openzeppelin/contracts/access/AccessControl.sol:55"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)": {
+              "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+              "numberOfBytes": "32"
+            },
+            "t_struct(RoleData)1128_storage": {
+              "label": "struct AccessControl.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl": {
+        "src": "@openzeppelin/contracts/access/IAccessControl.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/interfaces/IERC1967.sol:IERC1967": {
+        "src": "@openzeppelin/contracts/interfaces/IERC1967.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable": {
+        "src": "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "proxiableUUID()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils": {
+        "src": "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:15",
+        "version": {
+          "withMetadata": "7f11575669424afa921bc22e3704280afb6ac36895b036c66f5b0a2938852431",
+          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
+          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
+        },
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot",
+          "@openzeppelin/contracts/utils/Address.sol:Address"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          },
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:IBeacon": {
+        "src": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "implementation()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Address.sol:Address": {
+        "src": "@openzeppelin/contracts/utils/Address.sol:11",
+        "version": {
+          "withMetadata": "7802c21b7597abe9d4f2dd87f6420dd43b8922c4d2d277fb6abf0210fbe6bbca",
+          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
+          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
+        },
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts/utils/Errors.sol:Errors"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Context.sol:Context": {
+        "src": "@openzeppelin/contracts/utils/Context.sol:16",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Errors.sol:Errors": {
+        "src": "@openzeppelin/contracts/utils/Errors.sol:14",
+        "version": {
+          "withMetadata": "1b94bdc4b76042a83005e23efc9493e2f8f15bad4aeb5c7711d18da8df91d50b",
+          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
+          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot": {
+        "src": "@openzeppelin/contracts/utils/StorageSlot.sol:34",
+        "version": {
+          "withMetadata": "ee956455af12088b95f6ddb9dad4f2e893e639071d9c935497a8423d08a78326",
+          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
+          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165": {
+        "src": "@openzeppelin/contracts/utils/introspection/ERC165.sol:20",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165": {
+        "src": "@openzeppelin/contracts/utils/introspection/IERC165.sol:15",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/IUnifiedIdResolver.sol:IUnifiedIdResolver": {
+        "src": "contracts/IUnifiedIdResolver.sol:11",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "resolvePrimaryAddressFromUnifiedID(string)",
+          "resolveUnifiedIDFromAddress(address)",
+          "addSecondaryAddress(string,address)",
+          "removeSecondaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getSecondaryAddresses(string)",
+          "setAddress(string,address)",
+          "setUnifiedId(address,string)",
+          "clearRecords(string)",
+          "getPrimaryAddress(string,uint256)",
+          "getUnifiedIdFromAddress(address,uint256)",
+          "getAddresses(string,uint256)",
+          "isAddressAssociated(string,uint256,address)",
+          "setUnifiedIdPrimaryAddress(string,uint256,address)",
+          "updateUnifiedIdPrimaryAddress(string,uint256,address)",
+          "addUnifiedIdSecondaryAddress(string,uint256,address)",
+          "removeUnifiedIdSecondaryAddress(string,uint256,address)",
+          "clearUnifiedIdMappings(string,uint256)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveSecondaryAddressToUnifiedId(address,uint256)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address,uint256)",
+          "getAllAddresses(string)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string)",
+          "getAddressCount(string,uint256)",
+          "isAuthorized(address)",
+          "setAuthorization(address,bool)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/MotherContract.sol:RegistrarStorageMother": {
+        "src": "contracts/MotherContract.sol:18",
+        "version": {
+          "withMetadata": "284590e45f54d72de531bc53354b75c46252a807f755924e0e4e39b80d7835d2",
+          "withoutMetadata": "b6f9061bed9e6c4c6f93ceac1113ca4f76e3deddb1e9873ed5fc64636b8f1b75",
+          "linkedWithoutMetadata": "b6f9061bed9e6c4c6f93ceac1113ca4f76e3deddb1e9873ed5fc64636b8f1b75"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:PausableUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [
+          "contracts/SignatureVerifier.sol:SignatureVerifier"
+        ],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address,address)",
+          "pause()",
+          "unpause()",
+          "setResolver(address)",
+          "registerUnifiedId(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "updatePrimaryAddress(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "addSecondaryAddress(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "removeSecondaryAddress(string,uint256,address,(uint256,uint256,bytes))",
+          "updateUnifiedId(string,string,(uint256,uint256,bytes))",
+          "updateMasterAddress(string,address,(uint256,uint256,bytes))",
+          "getMasterAddress(string)",
+          "getChainData(string,uint256)",
+          "getNonce(string)",
+          "isChainRegistered(string,uint256)",
+          "getRegisteredChainIds(string)",
+          "resolveAddressToUnifiedId(address,uint256)",
+          "resolvePrimaryAddress(string,uint256)",
+          "resolveAllAddresses(string,uint256)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string,uint256)",
+          "hasMultipleAddresses(string,uint256)",
+          "getAllAddressesAcrossChains(string)",
+          "setMaxSecondaryAddressesPerChain(uint256)",
+          "setMaxChainsPerUnifiedId(uint256)",
+          "setEmergencyMode(bool)",
+          "emergencyMarkUnavailable(string)",
+          "emergencyMarkAvailable(string)",
+          "emergencyCleanupChainData(string,uint256)",
+          "getConfiguration()",
+          "()",
+          "()",
+          "withdrawEth(address payable,uint256)",
+          "withdrawERC20(address,address,uint256)",
+          "grantRelayerRole(address)",
+          "revokeRelayerRole(address)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantEmergencyRole(address)",
+          "revokeEmergencyRole(address)",
+          "grantUpgraderRole(address)",
+          "revokeUpgraderRole(address)",
+          "isRelayer(address)",
+          "isAdmin(address)",
+          "isEmergencyResponder(address)",
+          "isUpgrader(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "util",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_contract(RegistrarStorageUtil)9817",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:71"
+            },
+            {
+              "label": "resolver",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_contract(IUnifiedIdResolver)2617",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:72"
+            },
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_address",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:75"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_address",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:76"
+            },
+            {
+              "label": "unifiedIds",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_string_memory_ptr,t_struct(UnifiedID)2759_storage)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:92"
+            },
+            {
+              "label": "isUnavailableUnifiedId",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_string_memory_ptr,t_bool)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:93"
+            },
+            {
+              "label": "nonces",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:94"
+            },
+            {
+              "label": "config",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_struct(PackedConfig)2779_storage",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:103"
+            },
+            {
+              "label": "DOMAIN_SEPARATOR",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_bytes32",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:114"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_array(t_uint256)dyn_storage": {
+              "label": "uint256[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_contract(IUnifiedIdResolver)2617": {
+              "label": "contract IUnifiedIdResolver",
+              "numberOfBytes": "20"
+            },
+            "t_contract(RegistrarStorageUtil)9817": {
+              "label": "contract RegistrarStorageUtil",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_string_memory_ptr,t_bool)": {
+              "label": "mapping(string => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_struct(UnifiedID)2759_storage)": {
+              "label": "mapping(string => struct RegistrarStorageMother.UnifiedID)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_uint256)": {
+              "label": "mapping(string => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_struct(ChainData)2746_storage)": {
+              "label": "mapping(uint256 => struct RegistrarStorageMother.ChainData)",
+              "numberOfBytes": "32"
+            },
+            "t_string_memory_ptr": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_struct(ChainData)2746_storage": {
+              "label": "struct RegistrarStorageMother.ChainData",
+              "members": [
+                {
+                  "label": "primary",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "secondaries",
+                  "type": "t_array(t_address)dyn_storage",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "2"
+                }
+              ],
+              "numberOfBytes": "96"
+            },
+            "t_struct(PackedConfig)2779_storage": {
+              "label": "struct RegistrarStorageMother.PackedConfig",
+              "members": [
+                {
+                  "label": "maxSecondaryAddressesPerChain",
+                  "type": "t_uint128",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "maxChainsPerUnifiedId",
+                  "type": "t_uint128",
+                  "offset": 16,
+                  "slot": "0"
+                },
+                {
+                  "label": "emergencyMode",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_struct(UnifiedID)2759_storage": {
+              "label": "struct RegistrarStorageMother.UnifiedID",
+              "members": [
+                {
+                  "label": "masterAddress",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "chains",
+                  "type": "t_mapping(t_uint256,t_struct(ChainData)2746_storage)",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "registeredChainIds",
+                  "type": "t_array(t_uint256)dyn_storage",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "3"
+                }
+              ],
+              "numberOfBytes": "128"
+            },
+            "t_uint128": {
+              "label": "uint128",
+              "numberOfBytes": "16"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Pausable": [
+              {
+                "contract": "PausableUpgradeable",
+                "label": "_paused",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/RegistrarStorageChildEvents.sol:RegistrarStorageChildEvents": {
+        "src": "contracts/RegistrarStorageChildEvents.sol:16",
+        "version": {
+          "withMetadata": "f1e84c9f5a1d6a0ede331bd86c893cbf5418b4755c09272fb8efaae2345ba5d6",
+          "withoutMetadata": "5798b7d33026a04b1455c86b4c9f1c7939ea569e4a557654886396ec0cab1e61",
+          "linkedWithoutMetadata": "5798b7d33026a04b1455c86b4c9f1c7939ea569e4a557654886396ec0cab1e61"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address,address,uint256)",
+          "setUtilImplementation(address)",
+          "setResolver(address)",
+          "setChainId(uint256)",
+          "registerRegistrar(string,address)",
+          "pauseRegistration()",
+          "unpauseRegistration()",
+          "initiateRegisterUnifiedId(string,address,bytes,bytes,bytes)",
+          "completeRegisterUnifiedId(string,address,bytes,bytes,uint256,uint256)",
+          "initiateUpdateUnifiedId(string,string,bytes,bytes)",
+          "completeUpdateUnifiedId(string,string,bytes,uint256,uint256)",
+          "initiatePrimaryAddressChange(string,address,bytes,bytes,bytes)",
+          "finalizePrimaryAddressChange(string,address,bytes,bytes,uint256,uint256)",
+          "initiateAddSecondaryAddress(string,address,bytes,bytes,bytes)",
+          "completeAddSecondaryAddress(string,address,bytes,bytes,uint256,uint256)",
+          "initiateRemoveSecondaryAddress(string,address,bytes,bytes)",
+          "completeRemoveSecondaryAddress(string,address,bytes,uint256,uint256)",
+          "isPrimaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getPrimaryAddress(string)",
+          "getSecondaryAddresses(string)",
+          "getTotalRegisteredUnifiedIds()",
+          "resolveAddressToUnifiedId(address)",
+          "resolvePrimaryAddress(string)",
+          "resolveAllAddresses(string)",
+          "resolveAddressAssociation(string,address)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "getAllAddresses(string)",
+          "getAddressCount(string)",
+          "hasMultipleAddresses(string)",
+          "manageRole(bytes32,address,bool)",
+          "isRelayer(address)",
+          "isRegistrar(address)",
+          "isAdmin(address)",
+          "isEmergencyResponder(address)",
+          "isUpgrader(address)",
+          "setMaxSecondaryAddresses(uint256)",
+          "setRegistrarRegistrationPermission(bool)",
+          "setEmergencyMode(bool)",
+          "setUnifiedIdLengthLimits(uint256,uint256)",
+          "emergencyMarkUnavailable(string)",
+          "emergencyMarkAvailable(string)",
+          "emergencyRemoveRegistrar(address)",
+          "getConfiguration()",
+          "getAllRegistrars()",
+          "getAllRegistrarsWithNames()",
+          "getTotalRegistrars()",
+          "getRegistrarInfo(address)",
+          "()",
+          "()",
+          "withdrawEth(address payable,uint256)",
+          "withdrawERC20(address,address,uint256)",
+          "getRegistrarName(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:73"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:74"
+            },
+            {
+              "label": "config",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_struct(PackedConfig)5608_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:129"
+            },
+            {
+              "label": "totalRegisteredUnifiedIds",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint256",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:132"
+            },
+            {
+              "label": "chainId",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_uint256",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:133"
+            },
+            {
+              "label": "util",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_contract(RegistrarStorageUtil)9817",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:135"
+            },
+            {
+              "label": "resolver",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_contract(IUnifiedIdResolver)2617",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:136"
+            },
+            {
+              "label": "registrarAddresses",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_array(t_address)dyn_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:138"
+            },
+            {
+              "label": "registrarNameToAddress",
+              "offset": 0,
+              "slot": "8",
+              "type": "t_mapping(t_bytes32,t_address)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:141"
+            },
+            {
+              "label": "totalRegistrarUpdates",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_mapping(t_address,t_uint8)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:142"
+            },
+            {
+              "label": "userAddresses",
+              "offset": 0,
+              "slot": "10",
+              "type": "t_mapping(t_bytes32,t_struct(UserData)5595_storage)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:143"
+            },
+            {
+              "label": "unavailableUnifiedIds",
+              "offset": 0,
+              "slot": "11",
+              "type": "t_mapping(t_bytes32,t_bool)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:144"
+            },
+            {
+              "label": "registeredUnifiedIds",
+              "offset": 0,
+              "slot": "12",
+              "type": "t_mapping(t_bytes32,t_bool)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:145"
+            },
+            {
+              "label": "resolveAddressFromUnifiedId",
+              "offset": 0,
+              "slot": "13",
+              "type": "t_mapping(t_bytes32,t_address)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:146"
+            },
+            {
+              "label": "resolveUnifiedIdFromAddress",
+              "offset": 0,
+              "slot": "14",
+              "type": "t_mapping(t_address,t_bytes32)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:147"
+            },
+            {
+              "label": "usedNonces",
+              "offset": 0,
+              "slot": "15",
+              "type": "t_mapping(t_bytes32,t_mapping(t_uint256,t_bool))",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:148"
+            },
+            {
+              "label": "registrarNames",
+              "offset": 0,
+              "slot": "16",
+              "type": "t_array(t_string_storage)dyn_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:150"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_array(t_string_storage)dyn_storage": {
+              "label": "string[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_contract(IUnifiedIdResolver)2617": {
+              "label": "contract IUnifiedIdResolver",
+              "numberOfBytes": "20"
+            },
+            "t_contract(RegistrarStorageUtil)9817": {
+              "label": "contract RegistrarStorageUtil",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bytes32)": {
+              "label": "mapping(address => bytes32)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint8)": {
+              "label": "mapping(address => uint8)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_address)": {
+              "label": "mapping(bytes32 => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_bool)": {
+              "label": "mapping(bytes32 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_mapping(t_uint256,t_bool))": {
+              "label": "mapping(bytes32 => mapping(uint256 => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(UserData)5595_storage)": {
+              "label": "mapping(bytes32 => struct RegistrarStorageChildEvents.UserData)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_bool)": {
+              "label": "mapping(uint256 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_struct(PackedConfig)5608_storage": {
+              "label": "struct RegistrarStorageChildEvents.PackedConfig",
+              "members": [
+                {
+                  "label": "maxSecondaryAddresses",
+                  "type": "t_uint8",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "minUnifiedIdLength",
+                  "type": "t_uint8",
+                  "offset": 1,
+                  "slot": "0"
+                },
+                {
+                  "label": "maxUnifiedIdLength",
+                  "type": "t_uint8",
+                  "offset": 2,
+                  "slot": "0"
+                },
+                {
+                  "label": "isPaused",
+                  "type": "t_bool",
+                  "offset": 3,
+                  "slot": "0"
+                },
+                {
+                  "label": "publicRegistrarRegistration",
+                  "type": "t_bool",
+                  "offset": 4,
+                  "slot": "0"
+                },
+                {
+                  "label": "emergencyMode",
+                  "type": "t_bool",
+                  "offset": 5,
+                  "slot": "0"
+                }
+              ],
+              "numberOfBytes": "32"
+            },
+            "t_struct(UserData)5595_storage": {
+              "label": "struct RegistrarStorageChildEvents.UserData",
+              "members": [
+                {
+                  "label": "primary",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "isSecondary",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "secondaries",
+                  "type": "t_array(t_address)dyn_storage",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "3"
+                }
+              ],
+              "numberOfBytes": "128"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/RegistrarStorageUtil.sol:RegistrarStorageUtil": {
+        "src": "contracts/RegistrarStorageUtil.sol:13",
+        "version": {
+          "withMetadata": "8abb9281d9d9bf7d3e7bed567dc2ba5860280009ea0698a6b907ae13f2b152cc",
+          "withoutMetadata": "8abb9281d9d9bf7d3e7bed567dc2ba5860280009ea0698a6b907ae13f2b152cc",
+          "linkedWithoutMetadata": "8abb9281d9d9bf7d3e7bed567dc2ba5860280009ea0698a6b907ae13f2b152cc"
+        },
+        "inherit": [
+          "@openzeppelin/contracts/access/AccessControl.sol:AccessControl",
+          "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts/utils/Context.sol:Context"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "setTokenPriceFeed(address,address,uint256)",
+          "setEthPriceFeed(address)",
+          "getRequiredTokenAmount(address,uint256)",
+          "getTokenAmount(address)",
+          "getMessageHash(bytes)",
+          "getEthSignedMessageHash(bytes32)",
+          "recoverSigner(bytes32,bytes)",
+          "verifySignatureSecure(bytes,(uint256,uint256,uint256,address,bytes32),address,bytes)",
+          "getCurrentNonce(address)",
+          "createDomainSeparator(string,string,uint256,address)",
+          "verifySignature(bytes,address,bytes)",
+          "isContract(address)",
+          "toLower(string)",
+          "checkLength(string)",
+          "checkAlphaNumericAndAscii(string)",
+          "unifiedIdValid(string)",
+          "isUnifiedIdValid(string)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantPriceFeedManagerRole(address)",
+          "revokePriceFeedManagerRole(address)",
+          "grantConfigManagerRole(address)",
+          "revokeConfigManagerRole(address)",
+          "isAdmin(address)",
+          "isPriceFeedManager(address)",
+          "isConfigManager(address)",
+          "setUnifiedIdLengthLimits(uint8,uint8)",
+          "getConfiguration()"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "RegistrarStorageUtil",
+            "src": "contracts/RegistrarStorageUtil.sol:104"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "_roles",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)",
+              "contract": "AccessControl",
+              "src": "@openzeppelin/contracts/access/AccessControl.sol:55"
+            },
+            {
+              "label": "tokenPriceFeed",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_mapping(t_address,t_address)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:27"
+            },
+            {
+              "label": "tokenDecimal",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:30"
+            },
+            {
+              "label": "ethPriceFeed",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:33"
+            },
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:37"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:40"
+            },
+            {
+              "label": "maxUnifiedIdLength",
+              "offset": 20,
+              "slot": "5",
+              "type": "t_uint8",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:47"
+            },
+            {
+              "label": "minUnifiedIdLength",
+              "offset": 21,
+              "slot": "5",
+              "type": "t_uint8",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:50"
+            },
+            {
+              "label": "nonces",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:395"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_address)": {
+              "label": "mapping(address => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint256)": {
+              "label": "mapping(address => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)": {
+              "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+              "numberOfBytes": "32"
+            },
+            "t_struct(RoleData)1128_storage": {
+              "label": "struct AccessControl.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/SignatureVerifier.sol:SignatureVerifier": {
+        "src": "contracts/SignatureVerifier.sol:10",
+        "version": {
+          "withMetadata": "aa3c52c6dc541dc15c15274c3d72ddec2e5ceba035dc209f1d6c7e69fdb3c74f",
+          "withoutMetadata": "0f658665dee22bf8474d002306aa97aed8328cbc141c58d78fe6acc21fa4db5a",
+          "linkedWithoutMetadata": "0f658665dee22bf8474d002306aa97aed8328cbc141c58d78fe6acc21fa4db5a"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/UnifiedIdResolver.sol:UnifiedIdResolver": {
+        "src": "contracts/UnifiedIdResolver.sol:17",
+        "version": {
+          "withMetadata": "73394a73fec98dea98b14a359f58ac7397760de6e39154614a986ce774d8355c",
+          "withoutMetadata": "ac267432f58e780d27fe01aae777cb6282d90c5ad078091534c2e8de1efb1fe6",
+          "linkedWithoutMetadata": "ac267432f58e780d27fe01aae777cb6282d90c5ad078091534c2e8de1efb1fe6"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable",
+          "contracts/IUnifiedIdResolver.sol:IUnifiedIdResolver"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address)",
+          "resolvePrimaryAddressFromUnifiedID(string)",
+          "resolveUnifiedIDFromAddress(address)",
+          "setAddress(string,address)",
+          "setUnifiedId(address,string)",
+          "clearRecords(string)",
+          "addSecondaryAddress(string,address)",
+          "removeSecondaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getSecondaryAddresses(string)",
+          "isAuthorized(address)",
+          "setAuthorization(address,bool)",
+          "setRegistry(address)",
+          "grantAuthorizedCallerRole(address)",
+          "revokeAuthorizedCallerRole(address)",
+          "grantRegistryRole(address)",
+          "revokeRegistryRole(address)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantUpgraderRole(address)",
+          "revokeUpgraderRole(address)",
+          "isAuthorizedCaller(address)",
+          "isRegistryRole(address)",
+          "isAdmin(address)",
+          "isUpgrader(address)",
+          "getOwner()",
+          "getRegistry()",
+          "canSetAuthorization(address)",
+          "hasRecords(string)",
+          "getRecords(string)",
+          "getPrimaryAddress(string,uint256)",
+          "getUnifiedIdFromAddress(address,uint256)",
+          "getAddresses(string,uint256)",
+          "isAddressAssociated(string,uint256,address)",
+          "setUnifiedIdPrimaryAddress(string,uint256,address)",
+          "updateUnifiedIdPrimaryAddress(string,uint256,address)",
+          "addUnifiedIdSecondaryAddress(string,uint256,address)",
+          "removeUnifiedIdSecondaryAddress(string,uint256,address)",
+          "clearUnifiedIdMappings(string,uint256)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveSecondaryAddressToUnifiedId(address,uint256)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address,uint256)",
+          "getAllAddresses(string)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string)",
+          "getAddressCount(string,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:39"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:40"
+            },
+            {
+              "label": "chainUnifiedIdToAddress",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_address))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:113"
+            },
+            {
+              "label": "chainAddressToUnifiedId",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:114"
+            },
+            {
+              "label": "chainSecondaryAddresses",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_array(t_address)dyn_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:115"
+            },
+            {
+              "label": "chainIsSecondary",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_mapping(t_address,t_bool)))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:116"
+            },
+            {
+              "label": "chainSecondaryToUnifiedId",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:120"
+            },
+            {
+              "label": "registry",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:123"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))": {
+              "label": "mapping(address => mapping(uint256 => string))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_address))": {
+              "label": "mapping(string => mapping(uint256 => address))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_array(t_address)dyn_storage))": {
+              "label": "mapping(string => mapping(uint256 => address[]))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_mapping(t_address,t_bool)))": {
+              "label": "mapping(string => mapping(uint256 => mapping(address => bool)))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_address)": {
+              "label": "mapping(uint256 => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_array(t_address)dyn_storage)": {
+              "label": "mapping(uint256 => address[])",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+              "label": "mapping(uint256 => mapping(address => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_string_storage)": {
+              "label": "mapping(uint256 => string)",
+              "numberOfBytes": "32"
+            },
+            "t_string_memory_ptr": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_bytes32": {
+              "label": "bytes32"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      }
+    },
+    {
+      "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol:AggregatorV3Interface": {
+        "src": "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol:5",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "decimals()",
+          "description()",
+          "version()",
+          "getRoundData(uint80)",
+          "latestRoundData()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:50",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)",
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_bytes32": {
+              "label": "bytes32"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)"
+            },
+            "t_address": {
+              "label": "address"
+            },
+            "t_bool": {
+              "label": "bool"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable": {
+        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:56",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:20",
+        "inherit": [
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [
+          "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils"
+        ],
+        "methods": [
+          "proxiableUUID()",
+          "upgradeToAndCall(address,bytes)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:17",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:PausableUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:18",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "paused()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_bool": {
+              "label": "bool"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Pausable": [
+              {
+                "contract": "PausableUpgradeable",
+                "label": "_paused",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:21",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {
+            "t_uint64": {
+              "label": "uint64"
+            },
+            "t_bool": {
+              "label": "bool"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/access/AccessControl.sol:AccessControl": {
+        "src": "@openzeppelin/contracts/access/AccessControl.sol:49",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts/utils/Context.sol:Context"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)",
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_roles",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)",
+              "contract": "AccessControl",
+              "src": "@openzeppelin/contracts/access/AccessControl.sol:55"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)": {
+              "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+              "numberOfBytes": "32"
+            },
+            "t_struct(RoleData)1128_storage": {
+              "label": "struct AccessControl.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl": {
+        "src": "@openzeppelin/contracts/access/IAccessControl.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "hasRole(bytes32,address)",
+          "getRoleAdmin(bytes32)",
+          "grantRole(bytes32,address)",
+          "revokeRole(bytes32,address)",
+          "renounceRole(bytes32,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/interfaces/IERC1967.sol:IERC1967": {
+        "src": "@openzeppelin/contracts/interfaces/IERC1967.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable": {
+        "src": "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "proxiableUUID()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils": {
+        "src": "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:15",
+        "version": {
+          "withMetadata": "0afacae4b751d9de6c69a548124e6911d8dd00ccfd63e01bd3337097418e7839",
+          "withoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6",
+          "linkedWithoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6"
+        },
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot",
+          "@openzeppelin/contracts/utils/Address.sol:Address"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          },
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:IBeacon": {
+        "src": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "implementation()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Address.sol:Address": {
+        "src": "@openzeppelin/contracts/utils/Address.sol:11",
+        "version": {
+          "withMetadata": "3b56013fa747950ac1c1e8e8c45378f2b2864a5f93010b555f58bc51ce20fa10",
+          "withoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6",
+          "linkedWithoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6"
+        },
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts/utils/Errors.sol:Errors"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "delegatecall",
+            "src": "@openzeppelin/contracts/utils/Address.sol:97"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Context.sol:Context": {
+        "src": "@openzeppelin/contracts/utils/Context.sol:16",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/Errors.sol:Errors": {
+        "src": "@openzeppelin/contracts/utils/Errors.sol:14",
+        "version": {
+          "withMetadata": "3e1f54f73145bc3a7c4e7a88ad73855168c59a55fe8e640e171b1e20f1464fee",
+          "withoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6",
+          "linkedWithoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot": {
+        "src": "@openzeppelin/contracts/utils/StorageSlot.sol:34",
+        "version": {
+          "withMetadata": "9042824f2fec86766fe31a85e0d867f69882c28125d1fb920df6ae2350ebf232",
+          "withoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6",
+          "linkedWithoutMetadata": "5cc1bfa58dabc87945e465d5d147adca6f09e6451b735c6cce7bc6ca5cb48ba6"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165": {
+        "src": "@openzeppelin/contracts/utils/introspection/ERC165.sol:20",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165"
+        ],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165": {
+        "src": "@openzeppelin/contracts/utils/introspection/IERC165.sol:15",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/IUnifiedIdResolver.sol:IUnifiedIdResolver": {
+        "src": "contracts/IUnifiedIdResolver.sol:11",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "resolvePrimaryAddressFromUnifiedID(string)",
+          "resolveUnifiedIDFromAddress(address)",
+          "addSecondaryAddress(string,address)",
+          "removeSecondaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getSecondaryAddresses(string)",
+          "setAddress(string,address)",
+          "setUnifiedId(address,string)",
+          "clearRecords(string)",
+          "getPrimaryAddress(string,uint256)",
+          "getUnifiedIdFromAddress(address,uint256)",
+          "getAddresses(string,uint256)",
+          "isAddressAssociated(string,uint256,address)",
+          "setUnifiedIdPrimaryAddress(string,uint256,address)",
+          "updateUnifiedIdPrimaryAddress(string,uint256,address)",
+          "addUnifiedIdSecondaryAddress(string,uint256,address)",
+          "removeUnifiedIdSecondaryAddress(string,uint256,address)",
+          "clearUnifiedIdMappings(string,uint256)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveSecondaryAddressToUnifiedId(address,uint256)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address,uint256)",
+          "getAllAddresses(string)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string)",
+          "getAddressCount(string,uint256)",
+          "isAuthorized(address)",
+          "setAuthorization(address,bool)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/MotherContract.sol:RegistrarStorageMother": {
+        "src": "contracts/MotherContract.sol:18",
+        "version": {
+          "withMetadata": "fa0b330e24867e3697fd3acb6ee59d98da04a7f7309051a5f086787d81ef8e99",
+          "withoutMetadata": "189fae788da46708f33427c731eafa1d8e8688ccb5d40116bf0a357bcd28e533",
+          "linkedWithoutMetadata": "189fae788da46708f33427c731eafa1d8e8688ccb5d40116bf0a357bcd28e533"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:PausableUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [
+          "contracts/SignatureVerifier.sol:SignatureVerifier"
+        ],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address,address)",
+          "pause()",
+          "unpause()",
+          "setResolver(address)",
+          "registerUnifiedId(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "updatePrimaryAddress(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "addSecondaryAddress(string,uint256,address,(uint256,uint256,bytes),(uint256,uint256,bytes))",
+          "removeSecondaryAddress(string,uint256,address,(uint256,uint256,bytes))",
+          "updateUnifiedId(string,string,(uint256,uint256,bytes))",
+          "updateMasterAddress(string,address,(uint256,uint256,bytes))",
+          "getMasterAddress(string)",
+          "getChainData(string,uint256)",
+          "getNonce(string)",
+          "isChainRegistered(string,uint256)",
+          "getRegisteredChainIds(string)",
+          "resolveAddressToUnifiedId(address,uint256)",
+          "resolvePrimaryAddress(string,uint256)",
+          "resolveAllAddresses(string,uint256)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string,uint256)",
+          "hasMultipleAddresses(string,uint256)",
+          "getAllAddressesAcrossChains(string)",
+          "setMaxSecondaryAddressesPerChain(uint256)",
+          "setMaxChainsPerUnifiedId(uint256)",
+          "setEmergencyMode(bool)",
+          "emergencyMarkUnavailable(string)",
+          "emergencyMarkAvailable(string)",
+          "emergencyCleanupChainData(string,uint256)",
+          "getConfiguration()",
+          "()",
+          "()",
+          "withdrawEth(address payable,uint256)",
+          "withdrawERC20(address,address,uint256)",
+          "grantRelayerRole(address)",
+          "revokeRelayerRole(address)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantEmergencyRole(address)",
+          "revokeEmergencyRole(address)",
+          "grantUpgraderRole(address)",
+          "revokeUpgraderRole(address)",
+          "isRelayer(address)",
+          "isAdmin(address)",
+          "isEmergencyResponder(address)",
+          "isUpgrader(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "util",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_contract(RegistrarStorageUtil)9869",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:71"
+            },
+            {
+              "label": "resolver",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_contract(IUnifiedIdResolver)2617",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:72"
+            },
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_address",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:75"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_address",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:76"
+            },
+            {
+              "label": "unifiedIds",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_string_memory_ptr,t_struct(UnifiedID)2759_storage)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:92"
+            },
+            {
+              "label": "isUnavailableUnifiedId",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_string_memory_ptr,t_bool)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:93"
+            },
+            {
+              "label": "nonces",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:94"
+            },
+            {
+              "label": "config",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_struct(PackedConfig)2779_storage",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:103"
+            },
+            {
+              "label": "DOMAIN_SEPARATOR",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_bytes32",
+              "contract": "RegistrarStorageMother",
+              "src": "contracts/MotherContract.sol:114"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_array(t_uint256)dyn_storage": {
+              "label": "uint256[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_contract(IUnifiedIdResolver)2617": {
+              "label": "contract IUnifiedIdResolver",
+              "numberOfBytes": "20"
+            },
+            "t_contract(RegistrarStorageUtil)9869": {
+              "label": "contract RegistrarStorageUtil",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_string_memory_ptr,t_bool)": {
+              "label": "mapping(string => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_struct(UnifiedID)2759_storage)": {
+              "label": "mapping(string => struct RegistrarStorageMother.UnifiedID)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_uint256)": {
+              "label": "mapping(string => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_struct(ChainData)2746_storage)": {
+              "label": "mapping(uint256 => struct RegistrarStorageMother.ChainData)",
+              "numberOfBytes": "32"
+            },
+            "t_string_memory_ptr": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_struct(ChainData)2746_storage": {
+              "label": "struct RegistrarStorageMother.ChainData",
+              "members": [
+                {
+                  "label": "primary",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "secondaries",
+                  "type": "t_array(t_address)dyn_storage",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "2"
+                }
+              ],
+              "numberOfBytes": "96"
+            },
+            "t_struct(PackedConfig)2779_storage": {
+              "label": "struct RegistrarStorageMother.PackedConfig",
+              "members": [
+                {
+                  "label": "maxSecondaryAddressesPerChain",
+                  "type": "t_uint128",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "maxChainsPerUnifiedId",
+                  "type": "t_uint128",
+                  "offset": 16,
+                  "slot": "0"
+                },
+                {
+                  "label": "emergencyMode",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_struct(UnifiedID)2759_storage": {
+              "label": "struct RegistrarStorageMother.UnifiedID",
+              "members": [
+                {
+                  "label": "masterAddress",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "chains",
+                  "type": "t_mapping(t_uint256,t_struct(ChainData)2746_storage)",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "registeredChainIds",
+                  "type": "t_array(t_uint256)dyn_storage",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "3"
+                }
+              ],
+              "numberOfBytes": "128"
+            },
+            "t_uint128": {
+              "label": "uint128",
+              "numberOfBytes": "16"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)"
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Pausable": [
+              {
+                "contract": "PausableUpgradeable",
+                "label": "_paused",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/RegistrarStorageChildEvents.sol:RegistrarStorageChildEvents": {
+        "src": "contracts/RegistrarStorageChildEvents.sol:16",
+        "version": {
+          "withMetadata": "2c92b60bf4c1b5e9cb76eb1b34ef385fafa1e48dbc91cb15815df1260cc4706d",
+          "withoutMetadata": "4d757d96b57c17ec2fb2d533736958f200c18e713403aa9e203ac0e8eb11815b",
+          "linkedWithoutMetadata": "4d757d96b57c17ec2fb2d533736958f200c18e713403aa9e203ac0e8eb11815b"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address,address,uint256)",
+          "setUtilImplementation(address)",
+          "setResolver(address)",
+          "setChainId(uint256)",
+          "registerRegistrar(string,address)",
+          "pauseRegistration()",
+          "unpauseRegistration()",
+          "initiateRegisterUnifiedId(string,address,bytes,bytes,bytes)",
+          "completeRegisterUnifiedId(string,address,bytes,bytes,uint256,uint256)",
+          "initiateUpdateUnifiedId(string,string,bytes,bytes)",
+          "completeUpdateUnifiedId(string,string,bytes,uint256,uint256)",
+          "initiatePrimaryAddressChange(string,address,bytes,bytes,bytes)",
+          "finalizePrimaryAddressChange(string,address,bytes,bytes,uint256,uint256)",
+          "initiateAddSecondaryAddress(string,address,bytes,bytes,bytes)",
+          "completeAddSecondaryAddress(string,address,bytes,bytes,uint256,uint256)",
+          "initiateRemoveSecondaryAddress(string,address,bytes,bytes)",
+          "completeRemoveSecondaryAddress(string,address,bytes,uint256,uint256)",
+          "isPrimaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getPrimaryAddress(string)",
+          "getSecondaryAddresses(string)",
+          "isRegisteredUnifiedId(string)",
+          "getTotalRegisteredUnifiedIds()",
+          "resolveAddressToUnifiedId(address)",
+          "resolvePrimaryAddress(string)",
+          "resolveAllAddresses(string)",
+          "resolveAddressAssociation(string,address)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "getAllAddresses(string)",
+          "getAddressCount(string)",
+          "hasMultipleAddresses(string)",
+          "grantRelayerRole(address)",
+          "revokeRelayerRole(address)",
+          "grantRegistrarRole(address)",
+          "revokeRegistrarRole(address)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantEmergencyRole(address)",
+          "revokeEmergencyRole(address)",
+          "grantUpgraderRole(address)",
+          "revokeUpgraderRole(address)",
+          "isRelayer(address)",
+          "isRegistrar(address)",
+          "isAdmin(address)",
+          "isEmergencyResponder(address)",
+          "isUpgrader(address)",
+          "setMaxSecondaryAddresses(uint256)",
+          "setRegistrarRegistrationPermission(bool)",
+          "setEmergencyMode(bool)",
+          "setUnifiedIdLengthLimits(uint256,uint256)",
+          "emergencyMarkUnavailable(string)",
+          "emergencyMarkAvailable(string)",
+          "emergencyRemoveRegistrar(address)",
+          "getConfiguration()",
+          "getAllRegistrars()",
+          "getAllRegistrarsWithNames()",
+          "getTotalRegistrars()",
+          "getRegistrarInfo(address)",
+          "()",
+          "()",
+          "withdrawEth(address payable,uint256)",
+          "withdrawERC20(address,address,uint256)",
+          "getRegistrarName(address)",
+          "isAddressTaken(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:39"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:40"
+            },
+            {
+              "label": "config",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_struct(PackedConfig)5575_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:98"
+            },
+            {
+              "label": "totalUnifiedIdRegistered",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_uint256",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:101"
+            },
+            {
+              "label": "chainId",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_uint256",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:102"
+            },
+            {
+              "label": "totalRegisteredUnifiedIds",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_uint256",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:103"
+            },
+            {
+              "label": "util",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_contract(RegistrarStorageUtil)9869",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:105"
+            },
+            {
+              "label": "resolver",
+              "offset": 0,
+              "slot": "8",
+              "type": "t_contract(IUnifiedIdResolver)2617",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:106"
+            },
+            {
+              "label": "registrarAddresses",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_array(t_address)dyn_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:108"
+            },
+            {
+              "label": "registrarNameToAddress",
+              "offset": 0,
+              "slot": "10",
+              "type": "t_mapping(t_string_memory_ptr,t_address)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:110"
+            },
+            {
+              "label": "totalRegistrarUpdates",
+              "offset": 0,
+              "slot": "11",
+              "type": "t_mapping(t_address,t_uint8)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:111"
+            },
+            {
+              "label": "userAddresses",
+              "offset": 0,
+              "slot": "12",
+              "type": "t_mapping(t_string_memory_ptr,t_struct(UserData)5562_storage)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:112"
+            },
+            {
+              "label": "unavailableUnifiedIds",
+              "offset": 0,
+              "slot": "13",
+              "type": "t_mapping(t_string_memory_ptr,t_bool)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:113"
+            },
+            {
+              "label": "registeredUnifiedIds",
+              "offset": 0,
+              "slot": "14",
+              "type": "t_mapping(t_string_memory_ptr,t_bool)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:114"
+            },
+            {
+              "label": "resolveAddressFromUnifiedId",
+              "offset": 0,
+              "slot": "15",
+              "type": "t_mapping(t_string_memory_ptr,t_address)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:115"
+            },
+            {
+              "label": "resolveUnifiedIdFromAddress",
+              "offset": 0,
+              "slot": "16",
+              "type": "t_mapping(t_address,t_string_storage)",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:116"
+            },
+            {
+              "label": "usedNonces",
+              "offset": 0,
+              "slot": "17",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_bool))",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:117"
+            },
+            {
+              "label": "registrarNames",
+              "offset": 0,
+              "slot": "18",
+              "type": "t_array(t_string_storage)dyn_storage",
+              "contract": "RegistrarStorageChildEvents",
+              "src": "contracts/RegistrarStorageChildEvents.sol:119"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_array(t_string_storage)dyn_storage": {
+              "label": "string[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_contract(IUnifiedIdResolver)2617": {
+              "label": "contract IUnifiedIdResolver",
+              "numberOfBytes": "20"
+            },
+            "t_contract(RegistrarStorageUtil)9869": {
+              "label": "contract RegistrarStorageUtil",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_string_storage)": {
+              "label": "mapping(address => string)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint8)": {
+              "label": "mapping(address => uint8)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_address)": {
+              "label": "mapping(string => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_bool)": {
+              "label": "mapping(string => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_bool))": {
+              "label": "mapping(string => mapping(uint256 => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_struct(UserData)5562_storage)": {
+              "label": "mapping(string => struct RegistrarStorageChildEvents.UserData)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_bool)": {
+              "label": "mapping(uint256 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_string_memory_ptr": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_struct(PackedConfig)5575_storage": {
+              "label": "struct RegistrarStorageChildEvents.PackedConfig",
+              "members": [
+                {
+                  "label": "maxSecondaryAddresses",
+                  "type": "t_uint128",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "minUnifiedIdLength",
+                  "type": "t_uint64",
+                  "offset": 16,
+                  "slot": "0"
+                },
+                {
+                  "label": "maxUnifiedIdLength",
+                  "type": "t_uint64",
+                  "offset": 24,
+                  "slot": "0"
+                },
+                {
+                  "label": "isPaused",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "publicRegistrarRegistration",
+                  "type": "t_bool",
+                  "offset": 1,
+                  "slot": "1"
+                },
+                {
+                  "label": "emergencyMode",
+                  "type": "t_bool",
+                  "offset": 2,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_struct(UserData)5562_storage": {
+              "label": "struct RegistrarStorageChildEvents.UserData",
+              "members": [
+                {
+                  "label": "primary",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "isSecondary",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "secondaries",
+                  "type": "t_array(t_address)dyn_storage",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "exists",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "3"
+                }
+              ],
+              "numberOfBytes": "128"
+            },
+            "t_uint128": {
+              "label": "uint128",
+              "numberOfBytes": "16"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint64": {
+              "label": "uint64",
+              "numberOfBytes": "8"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_bytes32": {
+              "label": "bytes32"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/RegistrarStorageUtil.sol:RegistrarStorageUtil": {
+        "src": "contracts/RegistrarStorageUtil.sol:13",
+        "version": {
+          "withMetadata": "91aac91f69d394899958fb297c2e836828bf5f31602fdf46bafc5cabea0bd2aa",
+          "withoutMetadata": "a380ad3c8ec26e4d9a8fccd626a385a200aaf208dcc34427998ef2a0dcf3462d",
+          "linkedWithoutMetadata": "a380ad3c8ec26e4d9a8fccd626a385a200aaf208dcc34427998ef2a0dcf3462d"
+        },
+        "inherit": [
+          "@openzeppelin/contracts/access/AccessControl.sol:AccessControl",
+          "@openzeppelin/contracts/utils/introspection/ERC165.sol:ERC165",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts/utils/Context.sol:Context"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "setTokenPriceFeed(address,address,uint256)",
+          "setEthPriceFeed(address)",
+          "getRequiredTokenAmount(address,uint256)",
+          "getTokenAmount(address)",
+          "getMessageHash(bytes)",
+          "getEthSignedMessageHash(bytes32)",
+          "recoverSigner(bytes32,bytes)",
+          "verifySignatureSecure(bytes,(uint256,uint256,uint256,address,bytes32),address,bytes)",
+          "getCurrentNonce(address)",
+          "createDomainSeparator(string,string,uint256,address)",
+          "verifySignature(bytes,address,bytes)",
+          "isContract(address)",
+          "toLower(string)",
+          "checkLength(string)",
+          "checkAlphaNumericAndAscii(string)",
+          "unifiedIdValid(string)",
+          "isUnifiedIdValid(string)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantPriceFeedManagerRole(address)",
+          "revokePriceFeedManagerRole(address)",
+          "grantConfigManagerRole(address)",
+          "revokeConfigManagerRole(address)",
+          "isAdmin(address)",
+          "isPriceFeedManager(address)",
+          "isConfigManager(address)",
+          "setUnifiedIdLengthLimits(uint8,uint8)",
+          "getConfiguration()"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "RegistrarStorageUtil",
+            "src": "contracts/RegistrarStorageUtil.sol:104"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "_roles",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)",
+              "contract": "AccessControl",
+              "src": "@openzeppelin/contracts/access/AccessControl.sol:55"
+            },
+            {
+              "label": "tokenPriceFeed",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_mapping(t_address,t_address)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:27"
+            },
+            {
+              "label": "tokenDecimal",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:30"
+            },
+            {
+              "label": "ethPriceFeed",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:33"
+            },
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:37"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_address",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:40"
+            },
+            {
+              "label": "maxUnifiedIdLength",
+              "offset": 20,
+              "slot": "5",
+              "type": "t_uint8",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:47"
+            },
+            {
+              "label": "minUnifiedIdLength",
+              "offset": 21,
+              "slot": "5",
+              "type": "t_uint8",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:50"
+            },
+            {
+              "label": "nonces",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "RegistrarStorageUtil",
+              "src": "contracts/RegistrarStorageUtil.sol:395"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_address)": {
+              "label": "mapping(address => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint256)": {
+              "label": "mapping(address => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)1128_storage)": {
+              "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+              "numberOfBytes": "32"
+            },
+            "t_struct(RoleData)1128_storage": {
+              "label": "struct AccessControl.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/SignatureVerifier.sol:SignatureVerifier": {
+        "src": "contracts/SignatureVerifier.sol:10",
+        "version": {
+          "withMetadata": "141b5fcb12724a3d63e54a71aec0a6e57be8ad114f479650cb6cf0db6e05e432",
+          "withoutMetadata": "1b9f74a09b188929c1f851080c93a2e40c9bfc5a485490f913e3f52f749128fb",
+          "linkedWithoutMetadata": "1b9f74a09b188929c1f851080c93a2e40c9bfc5a485490f913e3f52f749128fb"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.25"
+      },
+      "contracts/UnifiedIdResolver.sol:UnifiedIdResolver": {
+        "src": "contracts/UnifiedIdResolver.sol:17",
+        "version": {
+          "withMetadata": "a7e4ed33acdfe7aa17f9fef1b3d9ceb2aafd2664ba60bd74735a3628cf91068e",
+          "withoutMetadata": "5762fb69e8b37154b70bb63dcf7970acd54c0c685e17da3df99f494b2d24a396",
+          "linkedWithoutMetadata": "5762fb69e8b37154b70bb63dcf7970acd54c0c685e17da3df99f494b2d24a396"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:AccessControlUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:ERC165Upgradeable",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "@openzeppelin/contracts/access/IAccessControl.sol:IAccessControl",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable",
+          "contracts/IUnifiedIdResolver.sol:IUnifiedIdResolver"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "owner()",
+          "pendingOwner()",
+          "renounceOwnership()",
+          "transferOwnership(address)",
+          "acceptOwnership()",
+          "initialize(address)",
+          "resolvePrimaryAddressFromUnifiedID(string)",
+          "resolveUnifiedIDFromAddress(address)",
+          "setAddress(string,address)",
+          "setUnifiedId(address,string)",
+          "clearRecords(string)",
+          "addSecondaryAddress(string,address)",
+          "removeSecondaryAddress(string,address)",
+          "isSecondaryAddress(string,address)",
+          "getSecondaryAddresses(string)",
+          "isAuthorized(address)",
+          "setAuthorization(address,bool)",
+          "setRegistry(address)",
+          "grantAuthorizedCallerRole(address)",
+          "revokeAuthorizedCallerRole(address)",
+          "grantRegistryRole(address)",
+          "revokeRegistryRole(address)",
+          "grantAdminRole(address)",
+          "revokeAdminRole(address)",
+          "grantUpgraderRole(address)",
+          "revokeUpgraderRole(address)",
+          "isAuthorizedCaller(address)",
+          "isRegistryRole(address)",
+          "isAdmin(address)",
+          "isUpgrader(address)",
+          "getOwner()",
+          "getRegistry()",
+          "canSetAuthorization(address)",
+          "hasRecords(string)",
+          "getRecords(string)",
+          "getPrimaryAddress(string,uint256)",
+          "getUnifiedIdFromAddress(address,uint256)",
+          "getAddresses(string,uint256)",
+          "isAddressAssociated(string,uint256,address)",
+          "setUnifiedIdPrimaryAddress(string,uint256,address)",
+          "updateUnifiedIdPrimaryAddress(string,uint256,address)",
+          "addUnifiedIdSecondaryAddress(string,uint256,address)",
+          "removeUnifiedIdSecondaryAddress(string,uint256,address)",
+          "clearUnifiedIdMappings(string,uint256)",
+          "resolveSecondaryAddressToUnifiedId(address)",
+          "resolveSecondaryAddressToUnifiedId(address,uint256)",
+          "resolveAnyAddressToUnifiedId(address)",
+          "resolveAnyAddressToUnifiedId(address,uint256)",
+          "getAllAddresses(string)",
+          "getAllAddresses(string,uint256)",
+          "getAddressCount(string)",
+          "getAddressCount(string,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:39"
+            },
+            {
+              "label": "_pendingOwner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:40"
+            },
+            {
+              "label": "chainUnifiedIdToAddress",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_address))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:113"
+            },
+            {
+              "label": "chainAddressToUnifiedId",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:114"
+            },
+            {
+              "label": "chainSecondaryAddresses",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_array(t_address)dyn_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:115"
+            },
+            {
+              "label": "chainIsSecondary",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_mapping(t_address,t_bool)))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:116"
+            },
+            {
+              "label": "chainSecondaryToUnifiedId",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:120"
+            },
+            {
+              "label": "registry",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_address",
+              "contract": "UnifiedIdResolver",
+              "src": "contracts/UnifiedIdResolver.sol:123"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))": {
+              "label": "mapping(address => mapping(uint256 => string))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_address))": {
+              "label": "mapping(string => mapping(uint256 => address))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_array(t_address)dyn_storage))": {
+              "label": "mapping(string => mapping(uint256 => address[]))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_string_memory_ptr,t_mapping(t_uint256,t_mapping(t_address,t_bool)))": {
+              "label": "mapping(string => mapping(uint256 => mapping(address => bool)))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_address)": {
+              "label": "mapping(uint256 => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_array(t_address)dyn_storage)": {
+              "label": "mapping(uint256 => address[])",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+              "label": "mapping(uint256 => mapping(address => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_string_storage)": {
+              "label": "mapping(uint256 => string)",
+              "numberOfBytes": "32"
+            },
+            "t_string_memory_ptr": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RoleData)71_storage)": {
+              "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+            },
+            "t_bytes32": {
+              "label": "bytes32"
+            },
+            "t_struct(RoleData)71_storage": {
+              "label": "struct AccessControlUpgradeable.RoleData",
+              "members": [
+                {
+                  "label": "hasRole",
+                  "type": "t_mapping(t_address,t_bool)"
+                },
+                {
+                  "label": "adminRole",
+                  "type": "t_bytes32"
+                }
+              ]
+            },
+            "t_uint64": {
+              "label": "uint64"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.AccessControl": [
+              {
+                "contract": "AccessControlUpgradeable",
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)71_storage)",
+                "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.25"
+      }
+    }
+  ]
+}

@@ -14,13 +14,39 @@
     "lint:sol": "solhint 'contracts/**/*.sol'",
     "test": "$npm_execpath run test:forge && $npm_execpath run test:hardhat",
     "test:forge": "forge test",
-    "test:hardhat": "hardhat test"
+    "test:hardhat": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
+    "setup": "hardhat run scripts/setup.js",
+    "verify": "hardhat run scripts/verify.js",
+    "node": "hardhat node",
+    "diagnose": "hardhat run scripts/fix-timeout.js",
+    "diagnose:sepolia": "hardhat run scripts/fix-timeout.js --network sepolia",
+    "diagnose:mainnet": "hardhat run scripts/fix-timeout.js --network mainnet",
+    "deploy:enhanced": "hardhat run scripts/deploy-with-retry.js",
+    "deploy:enhanced:localhost": "hardhat run scripts/deploy-with-retry.js --network localhost",
+    "deploy:enhanced:sepolia": "hardhat run scripts/deploy-with-retry.js --network sepolia",
+    "deploy:enhanced:mainnet": "hardhat run scripts/deploy-with-retry.js --network mainnet",
+    "deploy:optimized": "hardhat run scripts/deploy-gas-optimized.js",
+    "deploy:optimized:sepolia": "hardhat run scripts/deploy-gas-optimized.js --network sepolia",
+    "deploy:optimized:mainnet": "hardhat run scripts/deploy-gas-optimized.js --network mainnet"
   },
   "resolutions": {
     "ethers": "^5.7.2",
     "hardhat-deploy": "^0.12.1"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@typechain/hardhat": "^9.0.0",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.8.1",
+    "typechain": "^8.3.0",
     "@babel/core": "^7.23.9",
     "@chainlink/contracts": "^1.3.0",
     "@layerzerolabs/eslint-config-next": "~2.3.39",
@@ -72,5 +98,12 @@
   "overrides": {
     "ethers": "^5.7.2",
     "hardhat-deploy": "^0.12.1"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@chainlink/contracts": "^0.8.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "dotenv": "^16.3.1"
   }
 }
