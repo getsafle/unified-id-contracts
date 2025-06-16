@@ -326,3 +326,170 @@ MIT License - see LICENSE file for details
 **Happy Deploying! 🎉**
 
 For issues or questions, please create an issue in the repository. 
+
+
+
+# Ownable2Step Implementation - Security Enhancement
+
+## Overview
+
+This document explains the implementation of the Ownable2Step pattern across all contracts to fix the critical ownership transfer vulnerability identified in the security audit.
+
+## The Problem
+
+The original OpenZeppelin `Ownable` pattern has a critical vulnerability:
+- **One-step ownership transfer**: `transferOwnership(newOwner)` immediately transfers ownership
+- **No recovery mechanism**: If wrong address is provided, ownership is permanently lost
+- **Human error risk**: Copy-paste errors, wrong network addresses, typos can brick the contract
+
+## Real-World Disasters
+
+1. **Parity Wallet Hack (2017)**: $280M lost due to ownership issues
+2. **Various DeFi Projects**: Multiple cases of lost ownership due to typos
+3. **ENS Domains**: Several high-value domains lost to wrong addresses
+
+## The Solution: Ownable2Step
+
+The Ownable2Step pattern implements a **two-step ownership transfer**:
+
+### Step 1: Initiate Transfer
+```solidity
+function transferOwnership(address newOwner) public onlyOwner {
+    require(newOwner != address(0), "Ownable: new owner is the zero address");
+    _pendingOwner = newOwner;
+    emit OwnershipTransferStarted(owner(), newOwner);
+}
+```
+- Current owner initiates the transfer
+- New owner is stored as `_pendingOwner`
+- Ownership hasn't changed yet
+- Can be cancelled by calling with a different address
+
+### Step 2: Accept Ownership
+```solidity
+function acceptOwnership() external {
+    address sender = msg.sender;
+    require(pendingOwner() == sender, "Ownable2Step: caller is not the new owner");
+    _transferOwnership(sender);
+}
+```
+- **New owner must explicitly accept** the ownership
+- Proves they control the address
+- Only then ownership is actually transferred
+
+## Implementation Details
+
+### Core Functions
+
+1. **owner()**: Returns current owner
+2. **pendingOwner()**: Returns pending owner (if any)
+3. **transferOwnership()**: Initiates transfer (Step 1)
+4. **acceptOwnership()**: Completes transfer (Step 2)
+5. **renounceOwnership()**: Owner can renounce (emergency)
+
+### Safety Features
+
+1. **Zero address protection**: Cannot transfer to address(0) unless renouncing
+2. **Same address protection**: Cannot transfer to current owner
+3. **Pending owner reset**: New transfer cancels previous pending transfer
+4. **Event emissions**: Full transparency of ownership changes
+
+### Events
+
+```solidity
+event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+```
+
+## Usage Examples
+
+### Safe Ownership Transfer
+
+```solidity
+// Step 1: Current owner initiates transfer
+contract.transferOwnership(0x1234567890123456789012345678901234567890);
+// Event: OwnershipTransferStarted(oldOwner, newOwner)
+
+// Step 2: New owner accepts (proves they control the address)
+// Must be called from the new owner's address
+contract.acceptOwnership();
+// Event: OwnershipTransferred(oldOwner, newOwner)
+```
+
+### Error Recovery
+
+```solidity
+// If wrong address was provided in step 1, just call transferOwnership again
+contract.transferOwnership(correctAddress);
+// Previous pending transfer is cancelled
+```
+
+## Security Benefits
+
+1. **Prevents accidental loss**: Wrong address can't accidentally receive ownership
+2. **Proves address control**: New owner must prove they control the private key
+3. **Allows error correction**: Can fix mistakes before ownership is transferred
+4. **Maintains reversibility**: Original owner retains control until step 2
+5. **Transparent process**: Events allow monitoring of ownership changes
+
+## Implementation Across Contracts
+
+### 1. MotherContract.sol
+- ✅ Ownable2Step implemented
+- ✅ Initialize function updated
+- ✅ All onlyOwner functions protected
+
+### 2. RegistrarStorageChildEvents.sol
+- ✅ Ownable2Step implemented
+- ✅ Initialize function updated
+- ✅ All onlyOwner functions protected
+
+### 3. UnifiedIdResolver.sol
+- ✅ Ownable2Step implemented
+- ✅ Initialize function updated
+- ✅ All onlyOwner functions protected
+
+### 4. RegistrarStorageUtil.sol
+- ✅ Ownable2Step implemented (non-upgradeable version)
+- ✅ Constructor updated
+- ✅ All onlyOwner functions protected
+
+## Breaking Changes
+
+### For Contract Owners
+- **Old**: `transferOwnership(newOwner)` - immediate transfer
+- **New**: Two-step process:
+   1. `transferOwnership(newOwner)` - initiate
+   2. New owner calls `acceptOwnership()` - complete
+
+### For DApps/Scripts
+- Update ownership transfer flows to handle two-step process
+- Monitor `OwnershipTransferStarted` events
+- Ensure new owner can call `acceptOwnership()`
+
+## Emergency Procedures
+
+### If Ownership Transfer Fails
+1. **Wrong address provided**: Call `transferOwnership()` again with correct address
+2. **New owner unresponsive**: Call `transferOwnership()` with different address
+3. **Emergency renounce**: Current owner can call `renounceOwnership()` (permanent)
+
+### Best Practices
+1. **Test on testnet first**: Always test ownership transfer on testnet
+2. **Verify addresses**: Double-check addresses before calling `transferOwnership()`
+3. **Monitor events**: Watch for `OwnershipTransferStarted` events
+4. **Quick acceptance**: New owner should accept promptly to complete transfer
+5. **Documentation**: Document the process for future ownership transfers
+
+## Gas Costs
+
+The two-step process requires two transactions instead of one:
+- **Step 1**: ~30k gas (similar to original)
+- **Step 2**: ~30k gas (new requirement)
+- **Total**: ~60k gas (vs ~30k for unsafe single-step)
+
+The additional cost is minimal compared to the security benefit of preventing permanent ownership loss.
+
+## Conclusion
+
+The Ownable2Step implementation provides a robust solution to the ownership transfer vulnerability while maintaining all existing functionality. The two-step process ensures that ownership can only be transferred to addresses that can prove control, preventing the permanent loss scenarios that have affected many DeFi projects. 
