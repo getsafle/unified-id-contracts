@@ -70,11 +70,11 @@ async function main() {
     console.log("RegistrarStorageChildEvents proxy deployed to:", deployed.RegistrarStorageChildEvents);
     console.log("RegistrarStorageChildEvents implementation deployed to:", deployed.RegistrarStorageChildEventsImpl);
 
-    // Step 4: Deploy MotherContract (upgradeable)
-    console.log("\n4. Deploying MotherContract...");
-    const MotherContract = await ethers.getContractFactory("MotherContract");
+    // Step 4: Deploy RegistrarStorageMother (upgradeable)
+    console.log("\n4. Deploying RegistrarStorageMother...");
+    const RegistrarStorageMother = await ethers.getContractFactory("RegistrarStorageMother");
     const motherContract = await upgrades.deployProxy(
-      MotherContract,
+      RegistrarStorageMother,
       [
         deployed.RegistrarStorageUtil,
         deployed.UnifiedIdResolver
@@ -85,10 +85,10 @@ async function main() {
       }
     );
     await motherContract.deployed();
-    deployed.MotherContract = motherContract.address;
-    deployed.MotherContractImpl = await upgrades.erc1967.getImplementationAddress(deployed.MotherContract);
-    console.log("MotherContract proxy deployed to:", deployed.MotherContract);
-    console.log("MotherContract implementation deployed to:", deployed.MotherContractImpl);
+    deployed.RegistrarStorageMother = motherContract.address;
+    deployed.RegistrarStorageMotherImpl = await upgrades.erc1967.getImplementationAddress(deployed.RegistrarStorageMother);
+    console.log("RegistrarStorageMother proxy deployed to:", deployed.RegistrarStorageMother);
+    console.log("RegistrarStorageMother implementation deployed to:", deployed.RegistrarStorageMotherImpl);
 
     // Step 5: Update UnifiedIdResolver to set RegistrarStorageChildEvents as registry
     console.log("\n5. Updating UnifiedIdResolver registry...");
@@ -104,12 +104,12 @@ async function main() {
     await resolverContract.grantRole(AUTHORIZED_CALLER_ROLE, deployed.RegistrarStorageChildEvents);
     console.log("Granted AUTHORIZED_CALLER_ROLE to RegistrarStorageChildEvents");
 
-    // Also grant to MotherContract
-    await resolverContract.grantRole(REGISTRY_ROLE, deployed.MotherContract);
-    console.log("Granted REGISTRY_ROLE to MotherContract");
+    // Also grant to RegistrarStorageMother
+    await resolverContract.grantRole(REGISTRY_ROLE, deployed.RegistrarStorageMother);
+    console.log("Granted REGISTRY_ROLE to RegistrarStorageMother");
     
-    await resolverContract.grantRole(AUTHORIZED_CALLER_ROLE, deployed.MotherContract);
-    console.log("Granted AUTHORIZED_CALLER_ROLE to MotherContract");
+    await resolverContract.grantRole(AUTHORIZED_CALLER_ROLE, deployed.RegistrarStorageMother);
+    console.log("Granted AUTHORIZED_CALLER_ROLE to RegistrarStorageMother");
 
     // Step 6: Configure RegistrarStorageUtil
     console.log("\n6. Configuring RegistrarStorageUtil...");

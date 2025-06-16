@@ -58,16 +58,16 @@ async function main() {
       console.log("✗ RegistrarStorageChildEvents implementation verification failed:", error.message);
     }
 
-    // Verify MotherContract implementation
-    console.log("\n4. Verifying MotherContract implementation...");
+    // Verify RegistrarStorageMother implementation
+    console.log("\n4. Verifying RegistrarStorageMother implementation...");
     try {
       await run("verify:verify", {
-        address: contracts.MotherContractImpl,
+        address: contracts.RegistrarStorageMotherImpl,
         constructorArguments: []
       });
-      console.log("✓ MotherContract implementation verified");
+      console.log("✓ RegistrarStorageMother implementation verified");
     } catch (error) {
-      console.log("✗ MotherContract implementation verification failed:", error.message);
+      console.log("✗ RegistrarStorageMother implementation verification failed:", error.message);
     }
 
     console.log("\n=== VERIFICATION COMPLETE ===");

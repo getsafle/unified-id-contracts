@@ -51,7 +51,7 @@ async function main() {
     const registrarStorage = await ethers.getContractAt("RegistrarStorageChildEvents", deployment.contracts.RegistrarStorageChildEvents);
     const resolver = await ethers.getContractAt("UnifiedIdResolver", deployment.contracts.UnifiedIdResolver);
     const storageUtil = await ethers.getContractAt("RegistrarStorageUtil", deployment.contracts.RegistrarStorageUtil);
-    const motherContract = await ethers.getContractAt("MotherContract", deployment.contracts.MotherContract);
+    const motherContract = await ethers.getContractAt("RegistrarStorageMother", deployment.contracts.RegistrarStorageMother);
 
     console.log("\n=== SETTING UP ROLES ===");
 
@@ -112,8 +112,8 @@ async function main() {
       await storageUtil.grantRole(await storageUtil.CONFIG_MANAGER_ROLE(), config.adminAddress);
     }
 
-    // Setup MotherContract roles
-    console.log("\n4. Setting up MotherContract roles...");
+    // Setup RegistrarStorageMother roles
+    console.log("\n4. Setting up RegistrarStorageMother roles...");
     
     if (config.adminAddress !== deployer.address) {
       console.log(`Granting ADMIN_ROLE to ${config.adminAddress}`);
