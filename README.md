@@ -125,8 +125,8 @@ getRegistry(); // Returns: 0x0000000000000000000000000000000000000000
 ```javascript
 // Initialize the MotherContract
 initialize(
-  "UTIL_ADDRESS", // _util: RegistrarStorageUtil address
-  "PROXY_RESOLVER_ADDRESS", // _resolver: UnifiedIdResolver address
+        "UTIL_ADDRESS", // _util: RegistrarStorageUtil address
+        "PROXY_RESOLVER_ADDRESS", // _resolver: UnifiedIdResolver address
 );
 
 // Set up relayer authorization
@@ -147,8 +147,8 @@ setAuthorizedRelayer("YOUR_RELAYER_ADDRESS", true);
 ```javascript
 // Initialize the ChildContract
 initialize(
-  "UTIL_ADDRESS", // _util: RegistrarStorageUtil address
-  "PROXY_RESOLVER_ADDRESS", // _resolver: UnifiedIdResolver address
+        "UTIL_ADDRESS", // _util: RegistrarStorageUtil address
+        "PROXY_RESOLVER_ADDRESS", // _resolver: UnifiedIdResolver address
 );
 
 // Set up relayer authorization
@@ -200,26 +200,26 @@ authorizedRelayers("YOUR_RELAYER_ADDRESS"); // Should be true
 ```javascript
 // Prepare test data
 const testData = {
-  unifiedId: "test.unified",
-  chainId: 1,
-  primaryAddress: "0x1234567890123456789012345678901234567890",
-  masterAddress: "0x1234567890123456789012345678901234567890",
+   unifiedId: "test.unified",
+   chainId: 1,
+   primaryAddress: "0x1234567890123456789012345678901234567890",
+   masterAddress: "0x1234567890123456789012345678901234567890",
 };
 
 // Create signature data (for testing, use dummy signatures)
 const data = web3.eth.abi.encodeParameters(
-  ["string", "address"],
-  [testData.unifiedId, testData.primaryAddress],
+        ["string", "address"],
+        [testData.unifiedId, testData.primaryAddress],
 );
 
 // Call registerUnifiedId
 registerUnifiedId(
-  testData.unifiedId,
-  testData.chainId,
-  testData.primaryAddress,
-  data,
-  "0x00", // masterSignature (dummy for testing)
-  "0x00", // primarySignature (dummy for testing)
+        testData.unifiedId,
+        testData.chainId,
+        testData.primaryAddress,
+        data,
+        "0x00", // masterSignature (dummy for testing)
+        "0x00", // primarySignature (dummy for testing)
 );
 ```
 
@@ -236,12 +236,12 @@ getUnifiedIdFromAddress("0x1234...", 1); // Should return: "test.unified"
 ```javascript
 // Add secondary address via MotherContract
 addSecondaryAddress(
-  "test.unified",
-  1,
-  "0x9876543210987654321098765432109876543210",
-  data,
-  "0x00", // primarySignature
-  "0x00", // secondarySignature
+        "test.unified",
+        1,
+        "0x9876543210987654321098765432109876543210",
+        data,
+        "0x00", // primarySignature
+        "0x00", // secondarySignature
 );
 
 // Verify via resolver
@@ -382,9 +382,9 @@ The Ownable2Step pattern implements a **two-step ownership transfer**:
 
 ```solidity
 function transferOwnership(address newOwner) public onlyOwner {
-    require(newOwner != address(0), "Ownable: new owner is the zero address");
-    _pendingOwner = newOwner;
-    emit OwnershipTransferStarted(owner(), newOwner);
+   require(newOwner != address(0), "Ownable: new owner is the zero address");
+   _pendingOwner = newOwner;
+   emit OwnershipTransferStarted(owner(), newOwner);
 }
 ```
 
@@ -397,9 +397,9 @@ function transferOwnership(address newOwner) public onlyOwner {
 
 ```solidity
 function acceptOwnership() external {
-    address sender = msg.sender;
-    require(pendingOwner() == sender, "Ownable2Step: caller is not the new owner");
-    _transferOwnership(sender);
+   address sender = msg.sender;
+   require(pendingOwner() == sender, "Ownable2Step: caller is not the new owner");
+   _transferOwnership(sender);
 }
 ```
 
@@ -428,7 +428,7 @@ function acceptOwnership() external {
 
 ```solidity
 event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 ```
 
 ## Usage Examples
@@ -494,8 +494,8 @@ contract.transferOwnership(correctAddress);
 
 - **Old**: `transferOwnership(newOwner)` - immediate transfer
 - **New**: Two-step process:
-  1.  `transferOwnership(newOwner)` - initiate
-  2.  New owner calls `acceptOwnership()` - complete
+   1.  `transferOwnership(newOwner)` - initiate
+   2.  New owner calls `acceptOwnership()` - complete
 
 ### For DApps/Scripts
 

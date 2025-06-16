@@ -3,6 +3,7 @@ pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "./IUnifiedIdResolver.sol";
+import "./RegistrarOperationsLib.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -14,73 +15,31 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
  * @dev Optimized version with enum errors, gas optimizations, and OpenZeppelin AccessControl
  */
 contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
+    using RegistrarOperationsLib for *;
 
     // ==================== ROLE DEFINITIONS ====================
-    
+
     /// @notice Role for authorized relayers who can execute operations
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
-    
+
     /// @notice Role for registrars who can initiate operations
     bytes32 public constant REGISTRAR_ROLE = keccak256("REGISTRAR_ROLE");
-    
+
     /// @notice Role for admin users with elevated privileges
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    
+
     /// @notice Role for emergency operations
     bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
-    
+
     /// @notice Role for upgrading the contract
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // === ERROR ENUMS FOR GAS OPTIMIZATION ===
-    error E1(); // "Ownable: caller is not the owner"
-    error E2(); // "Ownable: new owner is the zero address"
-    error E3(); // "Ownable2Step: caller is not the new owner"
-    error E4(); // "UnifiedID does not exist"
-    error E5(); // "Contract is Paused"
-    error E6(); // "UnifiedID already exists"
-    error E7(); // "UnifiedID not available"
-    error E8(); // "Registrar name is already taken."
-    error E9(); // "This Registrar name is already registered as a UnifiedID."
-    error E10(); // "Caller not a registrar"
-    error E11(); // "Caller not authorized relayer"
-    error E12(); // "Caller not admin or owner"
-    error E13(); // "Contract in emergency mode"
-    error E14(); // "Public registrar registration disabled"
-    error E15(); // "Util implementation: zero address"
-    error E16(); // "Resolver: zero address"
-    error E17(); // "Relayer: zero address"
-    error E18(); // "Registrar address: zero address"
-    error E19(); // "This address is already registered."
-    error E20(); // "Invalid UnifiedId format"
-    error E21(); // "This UnifiedId is taken by a Registrar."
-    error E22(); // "This UnifiedId is already registered."
-    error E23(); // "Operation expired"
-    error E24(); // "Nonce already used"
-    error E25(); // "Invalid primary signature"
-    error E26(); // "Invalid master signature"
-    error E27(); // "Invalid new UnifiedId format"
-    error E28(); // "Old UnifiedID not found"
-    error E29(); // "New UnifiedID already exists"
-    error E30(); // "Invalid signature"
-    error E31(); // "Duplicate secondary address in source data"
-    error E32(); // "Invalid current primary signature"
-    error E33(); // "Invalid new primary signature"
-    error E34(); // "Cannot add primary address as secondary"
-    error E35(); // "Secondary address already added"
-    error E36(); // "Maximum secondary addresses limit reached"
-    error E37(); // "Invalid secondary signature"
-    error E38(); // "User cannot be zero address"
-    error E39(); // "Invalid length limits"
-    error E40(); // "Address is not a registrar"
-    error E41(); // "Cannot withdraw to zero address"
-    error E42(); // "Insufficient balance"
-    error E43(); // "ETH transfer failed"
-    error E44(); // "Invalid token address"
-    error E45(); // "ERC20 transfer failed"
-    error E46(); // "Cannot update to same UnifiedId"
-    error E47(); // "Cannot set same primary address"
-    error E48(); // "Cannot set zero address as primary"
+    error E1(); error E2(); error E3(); error E4(); error E5(); error E6(); error E7(); error E8(); error E9(); error E10();
+    error E11(); error E12(); error E13(); error E14(); error E15(); error E16(); error E17(); error E18(); error E19(); error E20();
+    error E21(); error E22(); error E23(); error E24(); error E25(); error E26(); error E27(); error E28(); error E29(); error E30();
+    error E31(); error E32(); error E33(); error E34(); error E35(); error E36(); error E37(); error E38(); error E39(); error E40();
+    error E41(); error E42(); error E43(); error E44(); error E45(); error E46(); error E47(); error E48();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -168,56 +127,17 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     mapping(string => address) public resolveAddressFromUnifiedId;
     mapping(address => string) public resolveUnifiedIdFromAddress;
     mapping(string => mapping(uint256 => bool)) public usedNonces;
-    
+
     // STORAGE OPTIMIZATION: Store registrar names in array parallel to addresses
-    // This saves one mapping while maintaining efficient access
     string[] public registrarNames;
 
-    // === EVENTS (UNCHANGED) ===
-    event MaxSecondaryAddressesUpdated(uint256 oldMax, uint256 newMax);
-    event PublicRegistrarRegistrationToggled(bool enabled);
-    event EmergencyModeToggled(bool enabled);
-    event UnifiedIdLengthLimitsUpdated(uint256 minLength, uint256 maxLength);
-    event UtilImplementationUpdated(address indexed oldUtil, address indexed newUtil, address indexed updatedBy);
-    event ResolverUpdated(address indexed oldResolver, address indexed newResolver, address indexed updatedBy);
-    event ChainIdUpdated(uint256 indexed oldChainId, uint256 indexed newChainId, address indexed updatedBy);
-    event AuthorizedRelayerUpdated(address indexed relayer, bool authorized, address indexed updatedBy);
-    event EmergencyUnifiedIdMarked(string indexed unifiedId, bool available, address indexed updatedBy);
-    event EmergencyRegistrarRemoved(address indexed registrar, string registrarName, address indexed removedBy);
-    event SecondaryAddressAdded(string unifiedId, address secondary);
-    event SecondaryAddressRemoved(string unifiedId, address secondary);
+    // === CONSOLIDATED EVENTS ===
+    event ConfigUpdated(uint256 maxSecondary, bool publicReg, bool emergency, uint256 minLength, uint256 maxLength);
+    event SystemUpdated(address indexed component, address indexed newAddr, address indexed updatedBy);
+    event RegistrarAction(address indexed registrar, string action, address indexed updatedBy);
     event RegistrarRegistered(address registrar, string registrarName);
-    event RegistrarUpdated(address registrar, string oldName, string newName);
-    event RegistrationPaused(address by);
-    event RegistrationUnpaused(address by);
-    event UnifiedIDRegistered(string indexed unifiedId, address indexed primary, uint256 timestamp);
-    event UnifiedIDUpdated(string indexed unifiedId, address indexed oldPrimary, address indexed newPrimary);
-    event UnifiedIDChanged(string indexed oldUnifiedId, string indexed newUnifiedId, address indexed primary, uint256 timestamp);
-    event RegisterUnifiedIdInitiated(
-        string unifiedId,
-        address primaryAddress,
-        bytes masterSignature,
-        bytes primarySignature,
-        bytes options
-    );
-    event UpdateUnifiedIdInitiated(string oldUnifiedId, string newUnifiedId, bytes signature, bytes options);
-    event UpdateUnifiedIdPrimaryAddressInitiated(
-        string unifiedId,
-        address newPrimaryAddress,
-        bytes currentPrimarySignature,
-        bytes newPrimarySignature,
-        bytes options
-    );
-    event AddSecondaryAddressInitiated(
-        string unifiedId,
-        address secondaryAddress,
-        bytes primarySignature,
-        bytes secondarySignature,
-        bytes options
-    );
-    event RemoveSecondaryAddressInitiated(string unifiedId, address secondaryAddress, bytes signature, bytes options);
-    event EthWithdrawn(address indexed to, uint256 amount);
-    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
+    event RegistrationStatusChanged(bool paused, address by);
+    event WithdrawalExecuted(address indexed token, address indexed to, uint256 amount);
 
     // === ROLE-BASED MODIFIERS ===
     modifier unifiedIdExists(string calldata _unifiedId) {
@@ -306,22 +226,19 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     function setUtilImplementation(address _RegistrarStorageUtil) external onlyRole(ADMIN_ROLE) {
         if (_RegistrarStorageUtil == address(0)) revert E15();
-        address oldUtil = address(util);
+        emit SystemUpdated(address(util), _RegistrarStorageUtil, msg.sender);
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
-        emit UtilImplementationUpdated(oldUtil, _RegistrarStorageUtil, msg.sender);
     }
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
         if (_resolver == address(0)) revert E16();
-        address oldResolver = address(resolver);
+        emit SystemUpdated(address(resolver), _resolver, msg.sender);
         resolver = IUnifiedIdResolver(_resolver);
-        emit ResolverUpdated(oldResolver, _resolver, msg.sender);
     }
 
     function setChainId(uint256 _chainId) external onlyRole(ADMIN_ROLE) {
-        uint256 oldChainId = chainId;
+        emit SystemUpdated(address(0), address(uint160(_chainId)), msg.sender);
         chainId = _chainId;
-        emit ChainIdUpdated(oldChainId, _chainId, msg.sender);
     }
 
     function registerRegistrar(
@@ -329,7 +246,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         address _registrarAddress
     ) external payable whenNotPaused validateRegistrarName(_registrarName) publicRegistrarAllowed notInEmergencyMode returns (bool) {
         if (_registrarAddress == address(0)) revert E18();
-        if (isAddressTaken(_registrarAddress)) revert E19();
+        if (RegistrarOperationsLib.isAddressTaken(registrarAddresses, _registrarAddress)) revert E19();
 
         registrarNameToAddress[_registrarName] = _registrarAddress;
         registrarAddresses.push(_registrarAddress);
@@ -344,12 +261,12 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     function pauseRegistration() external onlyRole(ADMIN_ROLE) {
         config.isPaused = true;
-        emit RegistrationPaused(msg.sender);
+        emit RegistrationStatusChanged(true, msg.sender);
     }
 
     function unpauseRegistration() external onlyRole(ADMIN_ROLE) {
         config.isPaused = false;
-        emit RegistrationUnpaused(msg.sender);
+        emit RegistrationStatusChanged(false, msg.sender);
     }
 
     function initiateRegisterUnifiedId(
@@ -359,14 +276,18 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes calldata _primarySignature,
         bytes calldata _options
     ) external payable whenNotPaused onlyRegistrar returns (bool) {
-        if (!util.isUnifiedIdValid(_unifiedId)) revert E20();
-        if (userAddresses[_unifiedId].exists) revert E6();
-        if (unavailableUnifiedIds[_unifiedId]) revert E7();
-        if (registrarNameToAddress[_unifiedId] != address(0)) revert E21();
-        if (resolveAddressFromUnifiedId[_unifiedId] != address(0)) revert E22();
-
-        emit RegisterUnifiedIdInitiated(_unifiedId, _primaryAddress, _masterSignature, _primarySignature, _options);
-        return true;
+        return RegistrarOperationsLib.initiateRegisterUnifiedId(
+            _unifiedId,
+            _primaryAddress,
+            _masterSignature,
+            _primarySignature,
+            _options,
+            util,
+            userAddresses,
+            unavailableUnifiedIds,
+            registrarNameToAddress,
+            resolveAddressFromUnifiedId
+        );
     }
 
     function completeRegisterUnifiedId(
@@ -377,41 +298,39 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         uint256 _nonce,
         uint256 _timestamp
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-        if (usedNonces[_unifiedId][_nonce]) revert E24();
+        // Create structs for the library call
+        RegistrarOperationsLib.RegistrationParams memory params = RegistrarOperationsLib.RegistrationParams({
+            unifiedId: _unifiedId,
+            primaryAddress: _primaryAddress,
+            masterSignature: _masterSignature,
+            primarySignature: _primarySignature,
+            nonce: _nonce,
+            timestamp: _timestamp,
+            chainId: chainId
+        });
 
-        bytes memory message = abi.encode(
-            "REGISTER_UNIFIED_ID",
-            _unifiedId,
-            _primaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
+        RegistrarOperationsLib.ContractRefs memory contracts = RegistrarOperationsLib.ContractRefs({
+            util: util,
+            resolver: resolver
+        });
+
+        bool success = RegistrarOperationsLib.completeRegisterUnifiedId(
+            params,
+            contracts,
+            userAddresses,
+            usedNonces,
+            resolveAddressFromUnifiedId,
+            resolveUnifiedIdFromAddress,
+            registeredUnifiedIds,
+            unavailableUnifiedIds
         );
 
-        if (!util.verifySignature(message, _primaryAddress, _primarySignature)) revert E25();
-
-        if (_masterSignature.length != 0) {
-            if (!util.verifySignature(message, _primaryAddress, _masterSignature)) revert E26();
+        if (success) {
+            totalRegisteredUnifiedIds++;
+            totalUnifiedIdRegistered++;
         }
 
-        usedNonces[_unifiedId][_nonce] = true;
-
-        UserData storage userData = userAddresses[_unifiedId];
-        userData.primary = _primaryAddress;
-        userData.exists = true;
-
-        resolveAddressFromUnifiedId[_unifiedId] = _primaryAddress;
-        resolveUnifiedIdFromAddress[_primaryAddress] = _unifiedId;
-        registeredUnifiedIds[_unifiedId] = true;
-        totalRegisteredUnifiedIds++;
-        unavailableUnifiedIds[_unifiedId] = true;
-        totalUnifiedIdRegistered++;
-
-        resolver.setUnifiedIdPrimaryAddress(_unifiedId, chainId, _primaryAddress);
-
-        emit UnifiedIDRegistered(_unifiedId, _primaryAddress, block.timestamp);
-        return true;
+        return success;
     }
 
     function initiateUpdateUnifiedId(
@@ -420,9 +339,15 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes calldata _signature,
         bytes calldata _options
     ) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
-        if (!util.isUnifiedIdValid(_newUnifiedId)) revert E27();
-        emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, _signature, _options);
-        return true;
+        return RegistrarOperationsLib.initiateUpdateUnifiedId(
+            _oldUnifiedId,
+            _newUnifiedId,
+            _signature,
+            _options,
+            util,
+            userAddresses,
+            unavailableUnifiedIds
+        );
     }
 
     function completeUpdateUnifiedId(
@@ -432,64 +357,22 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         uint256 _nonce,
         uint256 _timestamp
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        if (!registeredUnifiedIds[_oldUnifiedId]) revert E28();
-        if (registeredUnifiedIds[_newUnifiedId]) revert E29();
-        
-        // EDGE CASE PROTECTION: Prevent updating to the same UnifiedId
-        if (keccak256(bytes(_oldUnifiedId)) == keccak256(bytes(_newUnifiedId))) revert E46();
-
-        UserData storage userData = userAddresses[_oldUnifiedId];
-        address currentPrimary = userData.primary;
-
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-        if (usedNonces[_oldUnifiedId][_nonce]) revert E24();
-
-        bytes memory message = abi.encode(
-            "UPDATE_UNIFIED_ID",
+        return RegistrarOperationsLib.completeUpdateUnifiedId(
             _oldUnifiedId,
             _newUnifiedId,
-            chainId,
+            _signature,
             _nonce,
-            _timestamp
+            _timestamp,
+            chainId,
+            util,
+            resolver,
+            userAddresses,
+            usedNonces,
+            resolveAddressFromUnifiedId,
+            resolveUnifiedIdFromAddress,
+            registeredUnifiedIds,
+            unavailableUnifiedIds
         );
-
-        if (!util.verifySignature(message, currentPrimary, _signature)) revert E30();
-
-        usedNonces[_oldUnifiedId][_nonce] = true;
-
-        address primaryAddress = currentPrimary;
-
-        resolveAddressFromUnifiedId[_newUnifiedId] = primaryAddress;
-        delete resolveAddressFromUnifiedId[_oldUnifiedId];
-        resolveUnifiedIdFromAddress[primaryAddress] = _newUnifiedId;
-
-        UserData storage newUserData = userAddresses[_newUnifiedId];
-        newUserData.primary = primaryAddress;
-        newUserData.exists = true;
-
-        resolver.clearUnifiedIdMappings(_oldUnifiedId, chainId);
-        resolver.setUnifiedIdPrimaryAddress(_newUnifiedId, chainId, primaryAddress);
-
-        uint256 secLength = userData.secondaries.length;
-        for (uint256 i; i < secLength;) {
-            address secondaryAddr = userData.secondaries[i];
-            if (newUserData.isSecondary[secondaryAddr]) revert E31();
-
-            newUserData.isSecondary[secondaryAddr] = true;
-            newUserData.secondaries.push(secondaryAddr);
-            resolver.addUnifiedIdSecondaryAddress(_newUnifiedId, chainId, secondaryAddr);
-
-            unchecked { ++i; }
-        }
-
-        delete registeredUnifiedIds[_oldUnifiedId];
-        registeredUnifiedIds[_newUnifiedId] = true;
-        unavailableUnifiedIds[_oldUnifiedId] = true;
-        unavailableUnifiedIds[_newUnifiedId] = true;
-        delete userAddresses[_oldUnifiedId];
-
-        emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, primaryAddress, block.timestamp);
-        return true;
     }
 
     function initiatePrimaryAddressChange(
@@ -499,14 +382,14 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes calldata newPrimarySignature,
         bytes calldata _options
     ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        emit UpdateUnifiedIdPrimaryAddressInitiated(
+        return RegistrarOperationsLib.initiatePrimaryAddressChange(
             _unifiedId,
             _newPrimaryAddress,
             currentPrimarySignature,
             newPrimarySignature,
-            _options
+            _options,
+            userAddresses
         );
-        return true;
     }
 
     function finalizePrimaryAddressChange(
@@ -517,40 +400,21 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         uint256 _nonce,
         uint256 _timestamp
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        UserData storage userData = userAddresses[_unifiedId];
-        address oldPrimary = userData.primary;
-        
-        // EDGE CASE PROTECTION: Prevent setting the same primary address
-        if (oldPrimary == _newPrimaryAddress) revert E47();
-        
-        // EDGE CASE PROTECTION: Prevent setting zero address as primary
-        if (_newPrimaryAddress == address(0)) revert E48();
-
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-        if (usedNonces[_unifiedId][_nonce]) revert E24();
-
-        bytes memory message = abi.encode(
-            "UPDATE_PRIMARY_ADDRESS",
+        return RegistrarOperationsLib.finalizePrimaryAddressChange(
             _unifiedId,
             _newPrimaryAddress,
-            chainId,
+            _currentPrimarySignature,
+            _newPrimarySignature,
             _nonce,
-            _timestamp
+            _timestamp,
+            chainId,
+            util,
+            resolver,
+            userAddresses,
+            usedNonces,
+            resolveAddressFromUnifiedId,
+            resolveUnifiedIdFromAddress
         );
-
-        if (!util.verifySignature(message, oldPrimary, _currentPrimarySignature)) revert E32();
-        if (!util.verifySignature(message, _newPrimaryAddress, _newPrimarySignature)) revert E33();
-
-        usedNonces[_unifiedId][_nonce] = true;
-        userData.primary = _newPrimaryAddress;
-        resolveAddressFromUnifiedId[_unifiedId] = _newPrimaryAddress;
-        resolveUnifiedIdFromAddress[_newPrimaryAddress] = _unifiedId;
-        resolveUnifiedIdFromAddress[oldPrimary] = "";
-
-        resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
-
-        emit UnifiedIDUpdated(_unifiedId, oldPrimary, _newPrimaryAddress);
-        return true;
     }
 
     function initiateAddSecondaryAddress(
@@ -560,20 +424,15 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes calldata _secondarySignature,
         bytes calldata _options
     ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        UserData storage userData = userAddresses[_unifiedId];
-
-        if (userData.primary == _secondaryAddress) revert E34();
-        if (userData.isSecondary[_secondaryAddress]) revert E35();
-        if (userData.secondaries.length >= config.maxSecondaryAddresses) revert E36();
-
-        emit AddSecondaryAddressInitiated(
+        return RegistrarOperationsLib.initiateAddSecondaryAddress(
             _unifiedId,
             _secondaryAddress,
             _primarySignature,
             _secondarySignature,
-            _options
+            _options,
+            userAddresses,
+            config
         );
-        return true;
     }
 
     function completeAddSecondaryAddress(
@@ -584,33 +443,29 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         uint256 _nonce,
         uint256 _timestamp
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        UserData storage userData = userAddresses[_unifiedId];
-
-        if (userData.primary == _secondaryAddress) revert E34();
-        if (userData.isSecondary[_secondaryAddress]) revert E35();
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-        if (usedNonces[_unifiedId][_nonce]) revert E24();
-
-        bytes memory message = abi.encode(
-            "ADD_SECONDARY_ADDRESS",
-            _unifiedId,
-            _secondaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
+        // Create structs for the library call
+        RegistrarOperationsLib.SecondaryAddressParams memory params = RegistrarOperationsLib.SecondaryAddressParams({
+            unifiedId: _unifiedId,
+            secondaryAddress: _secondaryAddress,
+            primarySignature: _primarySignature,
+            secondarySignature: _secondarySignature,
+            signature: "", // Not used for add operations
+            nonce: _nonce,
+            timestamp: _timestamp,
+            chainId: chainId
+        });
+        
+        RegistrarOperationsLib.ContractRefs memory contracts = RegistrarOperationsLib.ContractRefs({
+            util: util,
+            resolver: resolver
+        });
+        
+        return RegistrarOperationsLib.completeAddSecondaryAddress(
+            params,
+            contracts,
+            userAddresses,
+            usedNonces
         );
-
-        if (!util.verifySignature(message, userData.primary, _primarySignature)) revert E25();
-        if (!util.verifySignature(message, _secondaryAddress, _secondarySignature)) revert E37();
-
-        usedNonces[_unifiedId][_nonce] = true;
-        userData.isSecondary[_secondaryAddress] = true;
-        userData.secondaries.push(_secondaryAddress);
-
-        resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
-
-        emit SecondaryAddressAdded(_unifiedId, _secondaryAddress);
-        return true;
     }
 
     function initiateRemoveSecondaryAddress(
@@ -619,8 +474,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes calldata _signature,
         bytes calldata _options
     ) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        emit RemoveSecondaryAddressInitiated(_unifiedId, _secondaryAddress, _signature, _options);
-        return true;
+        return RegistrarOperationsLib.initiateRemoveSecondaryAddress(
+            _unifiedId,
+            _secondaryAddress,
+            _signature,
+            _options,
+            userAddresses
+        );
     }
 
     function completeRemoveSecondaryAddress(
@@ -630,42 +490,32 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         uint256 _nonce,
         uint256 _timestamp
     ) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        UserData storage userData = userAddresses[_unifiedId];
-
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-        if (usedNonces[_unifiedId][_nonce]) revert E24();
-
-        bytes memory message = abi.encode(
-            "REMOVE_SECONDARY_ADDRESS",
-            _unifiedId,
-            _secondaryAddress,
-            chainId,
-            _nonce,
-            _timestamp
+        // Create structs for the library call
+        RegistrarOperationsLib.SecondaryAddressParams memory params = RegistrarOperationsLib.SecondaryAddressParams({
+            unifiedId: _unifiedId,
+            secondaryAddress: _secondaryAddress,
+            primarySignature: "", // Not used for remove operations
+            secondarySignature: "", // Not used for remove operations
+            signature: _signature,
+            nonce: _nonce,
+            timestamp: _timestamp,
+            chainId: chainId
+        });
+        
+        RegistrarOperationsLib.ContractRefs memory contracts = RegistrarOperationsLib.ContractRefs({
+            util: util,
+            resolver: resolver
+        });
+        
+        return RegistrarOperationsLib.completeRemoveSecondaryAddress(
+            params,
+            contracts,
+            userAddresses,
+            usedNonces
         );
-
-        if (!util.verifySignature(message, userData.primary, _signature)) revert E30();
-
-        usedNonces[_unifiedId][_nonce] = true;
-        userData.isSecondary[_secondaryAddress] = false;
-
-        uint256 length = userData.secondaries.length;
-        for (uint256 i; i < length;) {
-            if (userData.secondaries[i] == _secondaryAddress) {
-                userData.secondaries[i] = userData.secondaries[length - 1];
-                userData.secondaries.pop();
-                break;
-            }
-            unchecked { ++i; }
-        }
-
-        resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
-
-        emit SecondaryAddressRemoved(_unifiedId, _secondaryAddress);
-        return true;
     }
 
-    // === VIEW FUNCTIONS (UNCHANGED) ===
+    // === VIEW FUNCTIONS ===
     function isPrimaryAddress(string calldata _unifiedId, address _address) external view returns (bool) {
         return userAddresses[_unifiedId].primary == _address;
     }
@@ -706,240 +556,131 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return resolver.isAddressAssociated(unifiedId, chainId, addr);
     }
 
-    /**
-     * @notice Resolves a secondary address to its UnifiedId
-     * @dev Finds which UnifiedId a secondary address belongs to on this chain
-     * @param secondaryAddr The secondary address to resolve
-     * @return The UnifiedId that the secondary address belongs to, empty string if not found
-     * @custom:gas-optimization Uses resolver's optimized lookup
-     */
     function resolveSecondaryAddressToUnifiedId(address secondaryAddr) external view returns (string memory) {
-        return resolver.resolveSecondaryAddressToUnifiedId(secondaryAddr, chainId);
+        return RegistrarOperationsLib.resolveSecondaryAddressToUnifiedId(resolver, secondaryAddr, chainId);
     }
 
-    /**
-     * @notice Resolves any address (primary or secondary) to its UnifiedId
-     * @dev Universal address resolver that works for both primary and secondary addresses
-     * @param addr The address to resolve (can be primary or secondary)
-     * @return unifiedId The UnifiedId associated with the address
-     * @return isPrimary True if the address is a primary address
-     * @return isSecondary True if the address is a secondary address
-     * @custom:gas-optimization Uses resolver's optimized lookup
-     */
     function resolveAnyAddressToUnifiedId(address addr) external view returns (
-        string memory unifiedId, 
-        bool isPrimary, 
+        string memory unifiedId,
+        bool isPrimary,
         bool isSecondary
     ) {
-        return resolver.resolveAnyAddressToUnifiedId(addr, chainId);
+        return RegistrarOperationsLib.resolveAnyAddressToUnifiedId(resolver, addr, chainId);
     }
 
     // ==================== COMBINED ADDRESS FUNCTIONS ====================
 
-    /**
-     * @notice Gets all addresses (primary + secondary) for a UnifiedId in a single array
-     * @dev Returns all addresses associated with the UnifiedId on this chain in one array
-     * @param unifiedId The UnifiedId to get all addresses for
-     * @return allAddresses Array containing primary address followed by all secondary addresses
-     * @custom:gas-optimization Efficient single-call solution instead of multiple calls + concatenation
-     * @custom:use-cases
-     * - DApp integration for displaying all addresses
-     * - Wallet interfaces showing complete address list
-     * - Permission checking across all addresses
-     * - Simplified iteration over all addresses
-     * @custom:array-structure [primary, secondary1, secondary2, ...]
-     */
     function getAllAddresses(string calldata unifiedId) external view returns (address[] memory allAddresses) {
-        return resolver.getAllAddresses(unifiedId, chainId);
+        return RegistrarOperationsLib.getAllAddresses(resolver, unifiedId, chainId);
     }
 
-    /**
-     * @notice Gets the total count of addresses (primary + secondary) for a UnifiedId
-     * @dev Returns the total number of addresses associated with the UnifiedId on this chain
-     * @param unifiedId The UnifiedId to count addresses for
-     * @return count Total number of addresses (1 primary + N secondary addresses)
-     * @custom:gas-optimization Lightweight function for getting address count without array allocation
-     * @custom:use-cases
-     * - Pre-allocating arrays for address operations
-     * - Checking if UnifiedId has multiple addresses
-     * - Gas estimation for batch operations
-     */
     function getAddressCount(string calldata unifiedId) external view returns (uint256 count) {
-        return resolver.getAddressCount(unifiedId, chainId);
+        return RegistrarOperationsLib.getAddressCount(resolver, unifiedId, chainId);
     }
 
-    /**
-     * @notice Checks if a UnifiedId has multiple addresses (more than just primary)
-     * @dev Convenience function to check if UnifiedId has secondary addresses
-     * @param unifiedId The UnifiedId to check
-     * @return hasMultiple True if UnifiedId has secondary addresses in addition to primary
-     * @custom:gas-optimization Uses address count instead of fetching full arrays
-     */
     function hasMultipleAddresses(string calldata unifiedId) external view returns (bool hasMultiple) {
-        return resolver.getAddressCount(unifiedId, chainId) > 1;
+        return RegistrarOperationsLib.getAddressCount(resolver, unifiedId, chainId) > 1;
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
-    
-    /**
-     * @notice Grant relayer role to an address
-     * @param relayer Address to grant relayer role
-     */
+
     function grantRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _grantRole(RELAYER_ROLE, relayer);
-        emit AuthorizedRelayerUpdated(relayer, true, msg.sender);
+        RegistrarOperationsLib.grantRelayerRole(this, relayer, RELAYER_ROLE);
+        emit RegistrarAction(relayer, "grant_relayer", msg.sender);
     }
 
-    /**
-     * @notice Revoke relayer role from an address
-     * @param relayer Address to revoke relayer role
-     */
     function revokeRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _revokeRole(RELAYER_ROLE, relayer);
-        emit AuthorizedRelayerUpdated(relayer, false, msg.sender);
+        RegistrarOperationsLib.revokeRelayerRole(this, relayer, RELAYER_ROLE);
+        emit RegistrarAction(relayer, "revoke_relayer", msg.sender);
     }
 
-    /**
-     * @notice Grant registrar role to an address
-     * @param registrar Address to grant registrar role
-     */
     function grantRegistrarRole(address registrar) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _grantRole(REGISTRAR_ROLE, registrar);
+        RegistrarOperationsLib.grantRegistrarRole(this, registrar, REGISTRAR_ROLE);
     }
 
-    /**
-     * @notice Revoke registrar role from an address
-     * @param registrar Address to revoke registrar role
-     */
     function revokeRegistrarRole(address registrar) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _revokeRole(REGISTRAR_ROLE, registrar);
+        RegistrarOperationsLib.revokeRegistrarRole(this, registrar, REGISTRAR_ROLE);
     }
 
-    /**
-     * @notice Grant admin role to an address
-     * @param admin Address to grant admin role
-     */
     function grantAdminRole(address admin) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _grantRole(ADMIN_ROLE, admin);
+        RegistrarOperationsLib.grantAdminRole(this, admin, ADMIN_ROLE);
     }
 
-    /**
-     * @notice Revoke admin role from an address
-     * @param admin Address to revoke admin role
-     */
     function revokeAdminRole(address admin) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _revokeRole(ADMIN_ROLE, admin);
+        RegistrarOperationsLib.revokeAdminRole(this, admin, ADMIN_ROLE);
     }
 
-    /**
-     * @notice Grant emergency role to an address
-     * @param emergency Address to grant emergency role
-     */
     function grantEmergencyRole(address emergency) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _grantRole(EMERGENCY_ROLE, emergency);
+        RegistrarOperationsLib.grantEmergencyRole(this, emergency, EMERGENCY_ROLE);
     }
 
-    /**
-     * @notice Revoke emergency role from an address
-     * @param emergency Address to revoke emergency role
-     */
     function revokeEmergencyRole(address emergency) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _revokeRole(EMERGENCY_ROLE, emergency);
+        RegistrarOperationsLib.revokeEmergencyRole(this, emergency, EMERGENCY_ROLE);
     }
 
-    /**
-     * @notice Grant upgrader role to an address
-     * @param upgrader Address to grant upgrader role
-     */
     function grantUpgraderRole(address upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _grantRole(UPGRADER_ROLE, upgrader);
+        RegistrarOperationsLib.grantUpgraderRole(this, upgrader, UPGRADER_ROLE);
     }
 
-    /**
-     * @notice Revoke upgrader role from an address
-     * @param upgrader Address to revoke upgrader role
-     */
     function revokeUpgraderRole(address upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _revokeRole(UPGRADER_ROLE, upgrader);
+        RegistrarOperationsLib.revokeUpgraderRole(this, upgrader, UPGRADER_ROLE);
     }
 
-    /**
-     * @notice Check if address has relayer role
-     * @param account Address to check
-     * @return True if address has relayer role
-     */
     function isRelayer(address account) external view returns (bool) {
         return hasRole(RELAYER_ROLE, account);
     }
 
-    /**
-     * @notice Check if address has registrar role
-     * @param account Address to check
-     * @return True if address has registrar role
-     */
     function isRegistrar(address account) external view returns (bool) {
         return hasRole(REGISTRAR_ROLE, account);
     }
 
-    /**
-     * @notice Check if address has admin role
-     * @param account Address to check
-     * @return True if address has admin role
-     */
     function isAdmin(address account) external view returns (bool) {
         return hasRole(ADMIN_ROLE, account);
     }
 
-    /**
-     * @notice Check if address has emergency role
-     * @param account Address to check
-     * @return True if address has emergency role
-     */
     function isEmergencyResponder(address account) external view returns (bool) {
         return hasRole(EMERGENCY_ROLE, account);
     }
 
-    /**
-     * @notice Check if address has upgrader role
-     * @param account Address to check
-     * @return True if address has upgrader role
-     */
     function isUpgrader(address account) external view returns (bool) {
         return hasRole(UPGRADER_ROLE, account);
     }
 
     // === ADMIN FUNCTIONS ===
     function setMaxSecondaryAddresses(uint256 _maxSecondaryAddresses) external onlyRole(ADMIN_ROLE) {
-        uint256 oldMax = config.maxSecondaryAddresses;
         config.maxSecondaryAddresses = uint128(_maxSecondaryAddresses);
-        emit MaxSecondaryAddressesUpdated(oldMax, _maxSecondaryAddresses);
+        _emitConfigUpdate();
     }
 
     function setRegistrarRegistrationPermission(bool _enabled) external onlyRole(ADMIN_ROLE) {
         config.publicRegistrarRegistration = _enabled;
-        emit PublicRegistrarRegistrationToggled(_enabled);
+        _emitConfigUpdate();
     }
 
     function setEmergencyMode(bool _enabled) external onlyRole(EMERGENCY_ROLE) {
         config.emergencyMode = _enabled;
-        emit EmergencyModeToggled(_enabled);
+        _emitConfigUpdate();
     }
 
     function setUnifiedIdLengthLimits(uint256 _minLength, uint256 _maxLength) external onlyRole(ADMIN_ROLE) {
         if (_minLength == 0 || _maxLength <= _minLength) revert E39();
         config.minUnifiedIdLength = uint64(_minLength);
         config.maxUnifiedIdLength = uint64(_maxLength);
-        emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
+        _emitConfigUpdate();
+    }
+
+    function _emitConfigUpdate() private {
+        emit ConfigUpdated(config.maxSecondaryAddresses, config.publicRegistrarRegistration, config.emergencyMode, config.minUnifiedIdLength, config.maxUnifiedIdLength);
     }
 
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyEmergency {
         unavailableUnifiedIds[_unifiedId] = true;
-        emit EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender);
+        emit RegistrarAction(address(0), "mark_unavailable", msg.sender);
     }
 
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyEmergency {
         unavailableUnifiedIds[_unifiedId] = false;
-        emit EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender);
+        emit RegistrarAction(address(0), "mark_available", msg.sender);
     }
 
     function emergencyRemoveRegistrar(address _registrarAddress) external onlyEmergency {
@@ -962,30 +703,18 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
             unchecked { ++i; }
         }
 
-        emit EmergencyRegistrarRemoved(_registrarAddress, registrarName, msg.sender);
+        emit RegistrarAction(_registrarAddress, "emergency_remove", msg.sender);
     }
 
-    function getConfiguration() external view returns (
-        uint256 _maxSecondaryAddresses,
-        bool _publicRegistrarRegistration,
-        bool _emergencyMode,
-        uint256 _minUnifiedIdLength,
-        uint256 _maxUnifiedIdLength
-    ) {
-        return (
-            config.maxSecondaryAddresses,
-            config.publicRegistrarRegistration,
-            config.emergencyMode,
-            config.minUnifiedIdLength,
-            config.maxUnifiedIdLength
-        );
+    function getConfiguration() external view returns (uint256, bool, bool, uint256, uint256) {
+        return (config.maxSecondaryAddresses, config.publicRegistrarRegistration, config.emergencyMode, config.minUnifiedIdLength, config.maxUnifiedIdLength);
     }
 
     function getAllRegistrars() external view returns (address[] memory) {
         return registrarAddresses;
     }
 
-    function getAllRegistrarsWithNames() external view returns (address[] memory addresses, string[] memory names) {
+    function getAllRegistrarsWithNames() external view returns (address[] memory, string[] memory) {
         return (registrarAddresses, registrarNames);
     }
 
@@ -993,16 +722,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return registrarAddresses.length;
     }
 
-    function getRegistrarInfo(address _address) external view returns (
-        bool isRegistrar,
-        string memory registrarName,
-        uint8 updateCount
-    ) {
-        return (
-            hasRole(REGISTRAR_ROLE, _address),
-            getRegistrarName(_address),
-            totalRegistrarUpdates[_address]
-        );
+    function getRegistrarInfo(address _address) external view returns (bool, string memory, uint8) {
+        return RegistrarOperationsLib.getRegistrarInfo(this, registrarAddresses, registrarNames, totalRegistrarUpdates, _address, REGISTRAR_ROLE);
     }
 
     receive() external payable {}
@@ -1015,7 +736,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         (bool success, ) = to.call{value: amount}("");
         if (!success) revert E43();
 
-        emit EthWithdrawn(to, amount);
+        emit WithdrawalExecuted(address(0), to, amount);
     }
 
     function withdrawERC20(address token, address to, uint256 amount) external onlyOwner whenNotPaused {
@@ -1027,38 +748,16 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         );
         if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert E45();
 
-        emit ERC20Withdrawn(token, to, amount);
+        emit WithdrawalExecuted(token, to, amount);
     }
 
-    // === HELPER FUNCTIONS FOR REMOVED MAPPINGS ===
-    
-    /**
-     * @notice Get registrar name for an address (optimized with parallel arrays)
-     * @param _address The registrar address
-     * @return The registrar name, empty string if not found
-     * @dev Uses parallel arrays instead of bidirectional mappings to save storage
-     */
+    // === HELPER FUNCTIONS ===
+
     function getRegistrarName(address _address) public view returns (string memory) {
-        for (uint256 i = 0; i < registrarAddresses.length; i++) {
-            if (registrarAddresses[i] == _address) {
-                return registrarNames[i];
-            }
-        }
-        return "";
+        return RegistrarOperationsLib.getRegistrarName(registrarAddresses, registrarNames, _address);
     }
-    
-    /**
-     * @notice Check if an address is taken by a registrar (replaces isAddressTaken mapping)
-     * @param _address The address to check
-     * @return True if address is taken by a registrar
-     */
+
     function isAddressTaken(address _address) public view returns (bool) {
-        // Check if address exists in registrarAddresses array
-        for (uint256 i = 0; i < registrarAddresses.length; i++) {
-            if (registrarAddresses[i] == _address) {
-                return true;
-            }
-        }
-        return false;
+        return RegistrarOperationsLib.isAddressTaken(registrarAddresses, _address);
     }
 }
