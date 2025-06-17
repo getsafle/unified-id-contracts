@@ -1,0 +1,131 @@
+# Code Owners for unified-id-contracts repository
+# This file defines who will be automatically assigned as reviewers for PRs
+# 
+# Order is important; the last matching pattern takes precedence.
+# More specific patterns should be placed after less specific ones.
+
+# =============================================================================
+# Global default owners
+# These owners will be requested for review when someone opens a pull request.
+# =============================================================================
+* @kunalmishra
+
+# =============================================================================
+# Smart Contract Code
+# Critical smart contract files require multiple reviewers
+# =============================================================================
+
+# Core smart contracts - require security review
+/contracts/*.sol                           @kunalmishra
+/contracts/RegistrarStorageUtil.sol        @kunalmishra
+/contracts/UnifiedIdResolver.sol           @kunalmishra
+/contracts/RegistrarStorageChildEvents.sol @kunalmishra
+/contracts/MotherContract.sol              @kunalmishra
+/contracts/SignatureVerifier.sol          @kunalmishra
+
+# Contract interfaces
+/contracts/I*.sol                          @kunalmishra
+
+# =============================================================================
+# Deployment and Infrastructure
+# =============================================================================
+
+# Deployment scripts
+/scripts/deploy*.js                       @kunalmishra
+/scripts/setup.js                         @kunalmishra
+/scripts/verify.js                        @kunalmishra
+
+# Hardhat configuration
+hardhat.config.js                         @kunalmishra
+
+# Package dependencies
+package.json                              @kunalmishra
+package-lock.json                         @kunalmishra
+
+# Environment and configuration files
+.env*                                     @kunalmishra
+*.config.js                               @kunalmishra
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+# Test files
+/test/**                                  @kunalmishra
+*.test.js                                 @kunalmishra
+*.spec.js                                 @kunalmishra
+
+# =============================================================================
+# Documentation
+# =============================================================================
+
+# Main documentation
+README.md                                 @kunalmishra
+/Documentation/**                         @kunalmishra
+
+# Contract documentation
+/contracts/README.md                      @kunalmishra
+
+# =============================================================================
+# DevOps and CI/CD
+# =============================================================================
+
+# GitHub workflows and actions
+/.github/**                               @kunalmishra
+
+# Git configuration
+.gitignore                                @kunalmishra
+.gitattributes                           @kunalmishra
+
+# =============================================================================
+# Security Critical Files
+# These files require additional security review
+# =============================================================================
+
+# Deployment configurations
+/deployments/**                           @kunalmishra
+
+# OpenZeppelin upgrades
+/.openzeppelin/**                         @kunalmishra
+
+# =============================================================================
+# Build and Compilation
+# =============================================================================
+
+# Solidity compiler outputs
+/artifacts/**                             @kunalmishra
+/cache/**                                 @kunalmishra
+
+# =============================================================================
+# Administrative Files
+# =============================================================================
+
+# License and legal
+LICENSE                                   @kunalmishra
+CONTRIBUTING.md                           @kunalmishra
+CODE_OF_CONDUCT.md                        @kunalmishra
+
+# =============================================================================
+# Team-specific ownership
+# Add more team members as the project grows:
+# 
+# Examples:
+# /contracts/**                          @kunalmishra @securityteam
+# /scripts/**                            @kunalmishra @devops-team
+# /test/**                               @kunalmishra @qa-team
+# /Documentation/**                      @kunalmishra @docs-team
+# =============================================================================
+
+# =============================================================================
+# Additional Configuration
+# 
+# To add more reviewers for specific areas:
+# 1. Add GitHub usernames or team names (with @)
+# 2. Use team names like @safle/security-team for organization teams
+# 3. More specific patterns override general ones
+# 
+# Example patterns:
+# *.sol                                  @security-expert
+# /contracts/security/**                 @security-team @audit-team
+# /scripts/deploy/**                     @devops-lead @security-lead
+# ============================================================================= 
