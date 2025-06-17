@@ -1,0 +1,22 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0x0c365b0c5b477b95c9EbCB780cA2deC275D663aC",
+  "timestamp": "2025-06-16T18:26:26.635Z",
+  "contracts": {
+    "RegistrarStorageUtil": "0x90b431B772AFd3f544474F766Ab4654A3E24E942",
+    "UnifiedIdResolver": "0x90afAD9C4ba46Ef807da192C438C8109570CbC9A",
+    "UnifiedIdResolverImpl": "0xac1502aBcbE3A57FDC70B1a8064dbF79D06526F5",
+    "RegistrarStorageChildEvents": "0x51758B78c87be8f66F6a885D80853599b1DEB3D0",
+    "RegistrarStorageChildEventsImpl": "0x359439b6FCBD59b75990635959F4cA49e4d4eb53",
+    "RegistrarStorageMother": "0xDBEd9D510E6c944a79b4791c1D18FBD61bC96FdE",
+    "RegistrarStorageMotherImpl": "0xCAe7d4F5fdCDf45f8370c0Bc82b0018BB37060D8"
+  },
+  "config": {
+    "chainId": "11155111",
+    "maxSecondaryAddresses": "10",
+    "minUnifiedIdLength": "4",
+    "maxUnifiedIdLength": "16",
+    "ethUsdPriceFeed": "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+  }
+}
