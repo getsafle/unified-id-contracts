@@ -173,14 +173,7 @@ function _authorizeUpgrade(address newImplementation) internal override {
         _;
     }
 
-    /**
-     * @notice Modifier to restrict access to admin users or owner
-     * @dev Reverts if caller is neither admin nor owner
-     */
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not admin or owner");
-        _;
-    }
+
 
     /**
      * @notice Renounces ownership of the contract
@@ -306,7 +299,6 @@ function _authorizeUpgrade(address newImplementation) internal override {
             uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
             uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
             uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
-            // Note: ethDecimals (tokenInfo[3]) is not used in this function but kept for API consistency
 
             require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
@@ -559,28 +551,8 @@ function _authorizeUpgrade(address newImplementation) internal override {
         return signer == _expectedSigner;
     }
 
-    /// @notice Deprecated constant: Maximum allowed unified ID length
-    uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
 
-    /// @notice Deprecated constant: Minimum required unified ID length
-    uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
-    /**
-     * @notice Checks if an address is a contract or externally owned account
-     * @dev Uses extcodesize to determine if address contains contract code
-     * @param _resolverAddress Address to check
-     * @return True if address is a contract, false if EOA
-     */
-    function isContract(address _resolverAddress)
-    public view
-    returns(bool)
-    {
-        uint32 size;
-        assembly {
-            size := extcodesize(_resolverAddress)
-        }
-        return (size != 0);
-    }
 
     /**
      * @notice Converts a string to lowercase
@@ -673,6 +645,20 @@ function _authorizeUpgrade(address newImplementation) internal override {
      */
     function isUnifiedIdValid(string memory _unifiedId) public view returns (bool) {
         return unifiedIdValid(_unifiedId);
+    }
+
+    /**
+     * @notice Checks if an address is a contract or externally owned account
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param _resolverAddress Address to check
+     * @return True if address is a contract, false if EOA
+     */
+    function isContract(address _resolverAddress) public view returns(bool) {
+        uint32 size;
+        assembly {
+            size := extcodesize(_resolverAddress)
+        }
+        return (size != 0);
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
@@ -821,5 +807,5 @@ function _authorizeUpgrade(address newImplementation) internal override {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }
