@@ -249,6 +249,8 @@ function _authorizeUpgrade(address newImplementation) internal override {
     function setTokenPriceFeed(address token, address priceFeed, uint256 decimal) external onlyRole(PRICE_FEED_MANAGER_ROLE) {
         require(token != address(0), "Token: zero address");
         require(priceFeed != address(0), "Price feed: zero address");
+        require(isContract(token), "Token address is not a contract");
+        require(isContract(priceFeed), "Price feed address is not a contract");
 
         uint256 oldDecimal = tokenDecimal[token];
         tokenPriceFeed[token] = priceFeed;
@@ -272,6 +274,8 @@ function _authorizeUpgrade(address newImplementation) internal override {
      */
     function setEthPriceFeed(address _ethPriceFeed) external onlyRole(PRICE_FEED_MANAGER_ROLE) {
         require(_ethPriceFeed != address(0), "ETH price feed: zero address");
+        require(isContract(_ethPriceFeed), "ETH price feed address is not a contract");
+        
         ethPriceFeed = _ethPriceFeed;
         emit EthPriceFeedSet(_ethPriceFeed);
     }

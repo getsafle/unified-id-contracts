@@ -201,6 +201,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function initialize(address _util, address _resolver) public initializer {
         if (_util == address(0)) revert E12();
         if (_resolver == address(0)) revert E13();
+        
+        // Validate contract addresses
+        require(_isContract(_util), "Util address is not a contract");
+        require(_isContract(_resolver), "Resolver address is not a contract");
 
         __UUPSUpgradeable_init();
         __Pausable_init();
@@ -250,6 +254,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
         if (_resolver == address(0)) revert E13();
+        require(_isContract(_resolver), "Resolver address is not a contract");
+        
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
         emit ResolverUpdated(oldResolver, _resolver, msg.sender);
@@ -798,10 +804,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         require(to != address(0), "Invalid recipient address");
         require(amount > 0, "Amount must be greater than 0");
 
-        // Verify token is a contract
-        uint256 codeSize;
-        assembly { codeSize := extcodesize(token) }
-        require(codeSize > 0, "Token address is not a contract");
+        // Verify token is a contract using RegistrarStorageUtil
+        require(util.isContract(token), "Token address is not a contract");
 
         // Check current balance
         uint256 contractBalance = IERC20(token).balanceOf(address(this));
@@ -923,5 +927,21 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
      */
     function isUpgrader(address account) external view returns (bool) {
         return hasRole(UPGRADER_ROLE, account);
+    }
+
+    // ==================== INTERNAL UTILITY FUNCTIONS ====================
+
+    /**
+     * @notice Checks if an address is a contract
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param addr Address to check
+     * @return True if address is a contract, false if EOA
+     */
+    function _isContract(address addr) internal view returns (bool) {
+        uint32 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return (size != 0);
     }
 }

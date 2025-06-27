@@ -232,6 +232,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         _grantRole(EMERGENCY_ROLE, msg.sender);
         _grantRole(UPGRADER_ROLE, msg.sender);
 
+        // Validate contract addresses
+        if (_RegistrarStorageUtil == address(0)) revert E15();
+        require(_isContract(_RegistrarStorageUtil), "RegistrarStorageUtil address is not a contract");
+        
+        if (_resolver == address(0)) revert E16();
+        require(_isContract(_resolver), "Resolver address is not a contract");
+
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
         resolver = IUnifiedIdResolver(_resolver);
         chainId = _chainId;
@@ -248,6 +255,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     function setUtilImplementation(address _RegistrarStorageUtil) external onlyRole(ADMIN_ROLE) {
         if (_RegistrarStorageUtil == address(0)) revert E15();
+        require(_isContract(_RegistrarStorageUtil), "RegistrarStorageUtil address is not a contract");
+        
         address oldUtil = address(util);
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
         emit UnifiedEvent(EventType.UtilImplementationUpdated, abi.encode(oldUtil, _RegistrarStorageUtil, msg.sender));
@@ -255,6 +264,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
         if (_resolver == address(0)) revert E16();
+        require(_isContract(_resolver), "Resolver address is not a contract");
+        
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
         emit UnifiedEvent(EventType.ResolverUpdated, abi.encode(oldResolver, _resolver, msg.sender));
@@ -691,6 +702,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     function withdrawERC20(address token, address to, uint256 amount) external onlyOwner whenNotPaused {
         if (token == address(0)) revert E44();
         if (to == address(0)) revert E41();
+        
+        // Verify token is a contract using RegistrarStorageUtil
+        require(util.isContract(token), "Token address is not a contract");
 
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, amount));
         if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert E45();
@@ -707,7 +721,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return "";
     }
 
-    // === INTERNAL HELPER FUNCTION ===
+    // === INTERNAL HELPER FUNCTIONS ===
     function _isAddressTaken(address _address) private view returns (bool) {
         for (uint256 i = 0; i < registrarAddresses.length; i++) {
             if (registrarAddresses[i] == _address) {
@@ -715,5 +729,19 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
             }
         }
         return false;
+    }
+
+    /**
+     * @notice Checks if an address is a contract
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param addr Address to check
+     * @return True if address is a contract, false if EOA
+     */
+    function _isContract(address addr) internal view returns (bool) {
+        uint32 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return (size != 0);
     }
 }

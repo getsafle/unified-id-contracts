@@ -160,11 +160,14 @@ contract UnifiedIdResolver is IUnifiedIdResolver, Initializable, UUPSUpgradeable
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(UPGRADER_ROLE, msg.sender);
 
-        registry = _registry;
+        // Validate registry address if not zero
         if (_registry != address(0)) {
+            require(_isContract(_registry), "Registry address is not a contract");
             _grantRole(AUTHORIZED_CALLER_ROLE, _registry);
             _grantRole(REGISTRY_ROLE, _registry);
         }
+        
+        registry = _registry;
     }
 
     function _authorizeUpgrade(address ) internal override view {
@@ -382,6 +385,8 @@ contract UnifiedIdResolver is IUnifiedIdResolver, Initializable, UUPSUpgradeable
      */
     function setRegistry(address _registry) external onlyOwner {
         require(_registry != address(0), "Registry: zero address");
+        require(_isContract(_registry), "Registry address is not a contract");
+        
         address oldRegistry = registry;
 
         // Revoke old registry roles
@@ -939,5 +944,21 @@ contract UnifiedIdResolver is IUnifiedIdResolver, Initializable, UUPSUpgradeable
 
         // Return 1 (primary) + number of secondary addresses
         return 1 + chainSecondaryAddresses[unifiedId][chainId].length;
+    }
+
+    // ==================== INTERNAL UTILITY FUNCTIONS ====================
+
+    /**
+     * @notice Checks if an address is a contract
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param addr Address to check
+     * @return True if address is a contract, false if EOA
+     */
+    function _isContract(address addr) internal view returns (bool) {
+        uint32 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return (size != 0);
     }
 } 
