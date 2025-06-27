@@ -3,6 +3,7 @@ pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -108,39 +109,44 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
         _disableInitializers();
     }
 
-    /**
-     * @notice Initializes the contract with default values and role-based access control
-     * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
-     * @dev Replaces constructor for upgradeable pattern
-     */
-    function initialize() public initializer {
-        __UUPSUpgradeable_init();
-        __AccessControl_init();
+ /**
+ * @notice Initializes the contract with default values and role-based access control
+ * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
+ * @param initialOwner Address that will become the initial owner and admin
+ */
+function initialize(address initialOwner) public initializer {
+    __UUPSUpgradeable_init();
+    __AccessControl_init();
 
-        // Initialize ownership
-        _owner = msg.sender;
-        emit OwnershipTransferred(address(0), msg.sender);
+    require(initialOwner != address(0), "Initial owner cannot be zero address");
 
-        // Initialize default values
-        maxUnifiedIdLength = 16;
-        minUnifiedIdLength = 4;
+    _owner = initialOwner;
+    emit OwnershipTransferred(address(0), initialOwner);
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(PRICE_FEED_MANAGER_ROLE, msg.sender);
-        _grantRole(CONFIG_MANAGER_ROLE, msg.sender);
-        _grantRole(UPGRADER_ROLE, msg.sender);
-    }
+    // Initialize default values
+    maxUnifiedIdLength = 16;
+    minUnifiedIdLength = 4;
 
-    /**
-     * @notice Authorizes contract upgrades
-     * @dev Only UPGRADER_ROLE or owner can authorize upgrades
-     * @param newImplementation Address of the new implementation
-     */
-    function _authorizeUpgrade(address newImplementation) internal override {
-        require(hasRole(UPGRADER_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not upgrader");
-    }
+    // Setup roles
+    _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+    _grantRole(ADMIN_ROLE, initialOwner);
+    _grantRole(PRICE_FEED_MANAGER_ROLE, initialOwner);
+    _grantRole(CONFIG_MANAGER_ROLE, initialOwner);
+    _grantRole(UPGRADER_ROLE, initialOwner);
+}
+
+/**
+ * @notice Authorizes contract upgrades
+ * @dev Only UPGRADER_ROLE, ADMIN_ROLE, or owner can authorize upgrades
+ * @param newImplementation Address of the new implementation
+ */
+function _authorizeUpgrade(address newImplementation) internal override {
+    require(
+        hasRole(UPGRADER_ROLE, msg.sender) || hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(),
+        "AccessControl: caller is not authorized"
+    );
+}
+
 
     /**
      * @notice Returns the address of the current owner
@@ -300,7 +306,7 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
             uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
             uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
             uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
-            uint256 ethDecimals = tokenInfo[3];     // Usually 8 decimals from Chainlink
+            // Note: ethDecimals (tokenInfo[3]) is not used in this function but kept for API consistency
 
             require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
@@ -811,8 +817,9 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
     }
 
     /**
-     * @dev Storage gap for safe upgrades
-     * @dev Reserves 50 slots for future state variables
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }
