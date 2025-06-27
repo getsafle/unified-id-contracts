@@ -30,6 +30,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     error E31(); error E32(); error E33(); error E34(); error E35(); error E36(); error E37(); error E38(); error E39(); error E40();
     error E41(); error E42(); error E43(); error E44(); error E45(); error E46(); error E47(); error E48();
 
+    // Secondary Address Error Mappings:
+    // E34: Cannot add primary address as secondary
+    // E35: Secondary address already exists  
+    // E36: Maximum secondary addresses exceeded
+    // E37: Secondary signature verification failed
+    // E38: Secondary address does not exist
+
     // === EVENT ENUM FOR OPTIMIZATION ===
     enum EventType {
         MaxSecondaryAddressesUpdated,
@@ -457,6 +464,12 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     }
 
     function initiateRemoveSecondaryAddress(string calldata _unifiedId, address _secondaryAddress, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
+        bytes32 id = _toBytes32(_unifiedId);
+        UserData storage userData = userAddresses[id];
+
+        // Validation: Ensure the secondary address actually exists before initiating removal
+        if (!userData.isSecondary[_secondaryAddress]) revert E38(); // Secondary address does not exist
+
         emit UnifiedEvent(EventType.RemoveSecondaryAddressInitiated, abi.encode(_unifiedId, _secondaryAddress, _signature, _options));
         return true;
     }
