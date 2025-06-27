@@ -2,15 +2,18 @@
 pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title RegistrarStorageUtil
  * @author kunalmkv
  * @notice Utility contract for price feeds, signature verification, and admin management with role-based access control
  * @dev Implements secure signature verification with EIP-712, price feed management, two-step ownership, and OpenZeppelin AccessControl
+ * @dev Uses UUPS upgradeable pattern with comprehensive authorization controls
  */
-contract RegistrarStorageUtil is AccessControl {
+contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
 
     // ==================== ROLE DEFINITIONS ====================
 
@@ -98,21 +101,46 @@ contract RegistrarStorageUtil is AccessControl {
     event TokenDecimalUpdated(address indexed token, uint256 oldDecimal, uint256 newDecimal);
 
     /**
-     * @notice Constructor initializes the contract with default values and role-based access control
-     * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
+     * @notice Constructor disables initializers to prevent implementation contract initialization
+     * @dev This is a security measure for upgradeable contracts
      */
     constructor() {
-        _owner = msg.sender;
+        _disableInitializers();
+    }
+
+    /**
+     * @notice Initializes the contract with default values and role-based access control
+     * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
+     * @param initialOwner Address that will become the initial owner and admin
+     */
+    function initialize(address initialOwner) public initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        require(initialOwner != address(0), "Initial owner cannot be zero address");
+        
+        _owner = initialOwner;
         maxUnifiedIdLength = 16;
         minUnifiedIdLength = 4;
 
         // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(PRICE_FEED_MANAGER_ROLE, msg.sender);
-        _grantRole(CONFIG_MANAGER_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+        _grantRole(ADMIN_ROLE, initialOwner);
+        _grantRole(PRICE_FEED_MANAGER_ROLE, initialOwner);
+        _grantRole(CONFIG_MANAGER_ROLE, initialOwner);
 
-        emit OwnershipTransferred(address(0), msg.sender);
+        emit OwnershipTransferred(address(0), initialOwner);
+    }
+
+    /**
+     * @notice Authorizes contract upgrades
+     * @dev Only admin or owner can authorize upgrades
+     * @param newImplementation Address of the new implementation contract
+     */
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not admin or owner");
+        // Silence unused parameter warning
+        newImplementation;
     }
 
     /**
@@ -272,7 +300,7 @@ contract RegistrarStorageUtil is AccessControl {
             uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
             uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
             uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
-            uint256 ethDecimals = tokenInfo[3];     // Usually 8 decimals from Chainlink
+            // Note: ethDecimals (tokenInfo[3]) is not used in this function but kept for API consistency
 
             require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
@@ -756,4 +784,11 @@ contract RegistrarStorageUtil is AccessControl {
             owner()
         );
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
