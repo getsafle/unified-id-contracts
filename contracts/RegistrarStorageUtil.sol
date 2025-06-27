@@ -3,8 +3,9 @@ pragma solidity =0.8.25;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title RegistrarStorageUtil
@@ -25,6 +26,9 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
 
     /// @notice Role for configuration managers
     bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
+
+    /// @notice Role for upgrading the contract
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /// @notice Mapping of token addresses to their corresponding Chainlink price feed addresses
     mapping(address => address) public tokenPriceFeed;
@@ -100,48 +104,49 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
      */
     event TokenDecimalUpdated(address indexed token, uint256 oldDecimal, uint256 newDecimal);
 
-    /**
-     * @notice Constructor disables initializers to prevent implementation contract initialization
-     * @dev This is a security measure for upgradeable contracts
-     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    /**
-     * @notice Initializes the contract with default values and role-based access control
-     * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
-     * @param initialOwner Address that will become the initial owner and admin
-     */
-    function initialize(address initialOwner) public initializer {
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
+ /**
+ * @notice Initializes the contract with default values and role-based access control
+ * @dev Sets deployer as owner and admin, establishes default unified ID length limits, and sets up roles
+ * @param initialOwner Address that will become the initial owner and admin
+ */
+function initialize(address initialOwner) public initializer {
+    __UUPSUpgradeable_init();
+    __AccessControl_init();
 
-        require(initialOwner != address(0), "Initial owner cannot be zero address");
-        
-        _owner = initialOwner;
-        maxUnifiedIdLength = 16;
-        minUnifiedIdLength = 4;
+    require(initialOwner != address(0), "Initial owner cannot be zero address");
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
-        _grantRole(ADMIN_ROLE, initialOwner);
-        _grantRole(PRICE_FEED_MANAGER_ROLE, initialOwner);
-        _grantRole(CONFIG_MANAGER_ROLE, initialOwner);
+    _owner = initialOwner;
+    emit OwnershipTransferred(address(0), initialOwner);
 
-        emit OwnershipTransferred(address(0), initialOwner);
-    }
+    // Initialize default values
+    maxUnifiedIdLength = 16;
+    minUnifiedIdLength = 4;
 
-    /**
-     * @notice Authorizes contract upgrades
-     * @dev Only admin or owner can authorize upgrades
-     * @param newImplementation Address of the new implementation contract
-     */
-    function _authorizeUpgrade(address newImplementation) internal view override {
-        require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not admin or owner");
-        // Silence unused parameter warning
-        newImplementation;
-    }
+    // Setup roles
+    _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+    _grantRole(ADMIN_ROLE, initialOwner);
+    _grantRole(PRICE_FEED_MANAGER_ROLE, initialOwner);
+    _grantRole(CONFIG_MANAGER_ROLE, initialOwner);
+    _grantRole(UPGRADER_ROLE, initialOwner);
+}
+
+/**
+ * @notice Authorizes contract upgrades
+ * @dev Only UPGRADER_ROLE, ADMIN_ROLE, or owner can authorize upgrades
+ * @param newImplementation Address of the new implementation
+ */
+function _authorizeUpgrade(address newImplementation) internal override {
+    require(
+        hasRole(UPGRADER_ROLE, msg.sender) || hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(),
+        "AccessControl: caller is not authorized"
+    );
+}
+
 
     /**
      * @notice Returns the address of the current owner
@@ -229,6 +234,7 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
             _grantRole(ADMIN_ROLE, newOwner);
             _grantRole(PRICE_FEED_MANAGER_ROLE, newOwner);
             _grantRole(CONFIG_MANAGER_ROLE, newOwner);
+            _grantRole(UPGRADER_ROLE, newOwner);
         }
         emit OwnershipTransferred(oldOwner, newOwner);
     }
@@ -744,6 +750,31 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
      */
     function isConfigManager(address account) external view returns (bool) {
         return hasRole(CONFIG_MANAGER_ROLE, account);
+    }
+
+    /**
+     * @notice Grant upgrader role to an address
+     * @param upgrader Address to grant upgrader role
+     */
+    function grantUpgraderRole(address upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(UPGRADER_ROLE, upgrader);
+    }
+
+    /**
+     * @notice Revoke upgrader role from an address
+     * @param upgrader Address to revoke upgrader role
+     */
+    function revokeUpgraderRole(address upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(UPGRADER_ROLE, upgrader);
+    }
+
+    /**
+     * @notice Check if address has upgrader role
+     * @param account Address to check
+     * @return True if address has upgrader role
+     */
+    function isUpgrader(address account) external view returns (bool) {
+        return hasRole(UPGRADER_ROLE, account);
     }
 
     // === ADMIN FUNCTIONS ===
