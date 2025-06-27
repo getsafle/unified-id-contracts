@@ -267,27 +267,24 @@ contract RegistrarStorageUtil is AccessControl {
         if (token == address(0)) {
             return registrarFees;
         } else {
+
             uint256[] memory tokenInfo = getTokenAmount(token);
-            uint256[] memory result = new uint256[](5);
-            result[0] = tokenInfo[0]; // tokenPriceInUSD
-            result[1] = tokenInfo[1]; // decimals
-            result[2] = tokenInfo[2]; // ethPriceInUSD
-            result[3] = tokenInfo[3]; // ethDecimals
+            uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
+            uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
+            uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
+            uint256 ethDecimals = tokenInfo[3];     // Usually 8 decimals from Chainlink
 
-            uint256 decimalAdjustment = 0;
-            if (tokenInfo[1] != tokenInfo[3]) {
-                if (tokenInfo[1] > tokenInfo[3]) {
-                    decimalAdjustment = tokenInfo[1] - tokenInfo[3];
-                    result[4] = (registrarFees * tokenInfo[2] * (10 ** decimalAdjustment)) / tokenInfo[0];
-                } else {
-                    decimalAdjustment = tokenInfo[3] - tokenInfo[1];
-                    result[4] = (registrarFees * tokenInfo[2]) / (tokenInfo[0] * (10 ** decimalAdjustment));
-                }
-            } else {
-                result[4] = (registrarFees * tokenInfo[2]) / tokenInfo[0];
-            }
+            require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
-            return result[4] / 10 ** tokenDecimal[token];
+            // STEP 1: Convert registrarFees (wei, 18 decimals) to USD (standardized 8 decimals)
+            uint256 registrarFeeInUSD = (registrarFees * ethPriceInUSD) / 1e18;
+            // registrarFees(1e18) * ethPriceInUSD(1e8) / 1e18 → 1e8 precision USD value
+
+            // STEP 2: Convert USD amount (8 decimals) to token amount using token price (8 decimals)
+            uint256 tokenAmount = (registrarFeeInUSD * (10 ** tokenDecimals)) / tokenPriceInUSD;
+            // (1e8 USD) * (10^tokenDecimals) / (1e8 USD) → tokenDecimals precision
+
+            return tokenAmount; // Correct token amount (in token's own decimals)
         }
     }
 
