@@ -167,14 +167,7 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
         _;
     }
 
-    /**
-     * @notice Modifier to restrict access to admin users or owner
-     * @dev Reverts if caller is neither admin nor owner
-     */
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not admin or owner");
-        _;
-    }
+
 
     /**
      * @notice Renounces ownership of the contract
@@ -300,7 +293,7 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
             uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
             uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
             uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
-            uint256 ethDecimals = tokenInfo[3];     // Usually 8 decimals from Chainlink
+            // Note: ethDecimals (tokenInfo[3]) not used in calculation as both prices are in 8 decimals
 
             require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
@@ -553,28 +546,8 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
         return signer == _expectedSigner;
     }
 
-    /// @notice Deprecated constant: Maximum allowed unified ID length
-    uint8 constant MAX_UNIFIED_ID_LENGTH = 16;
 
-    /// @notice Deprecated constant: Minimum required unified ID length
-    uint8 constant MIN_UNIFIED_ID_LENGTH = 4;
 
-    /**
-     * @notice Checks if an address is a contract or externally owned account
-     * @dev Uses extcodesize to determine if address contains contract code
-     * @param _resolverAddress Address to check
-     * @return True if address is a contract, false if EOA
-     */
-    function isContract(address _resolverAddress)
-    public view
-    returns(bool)
-    {
-        uint32 size;
-        assembly {
-            size := extcodesize(_resolverAddress)
-        }
-        return (size != 0);
-    }
 
     /**
      * @notice Converts a string to lowercase
@@ -667,6 +640,20 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
      */
     function isUnifiedIdValid(string memory _unifiedId) public view returns (bool) {
         return unifiedIdValid(_unifiedId);
+    }
+
+    /**
+     * @notice Checks if an address is a contract or externally owned account
+     * @dev Uses extcodesize to determine if address contains contract code
+     * @param _resolverAddress Address to check
+     * @return True if address is a contract, false if EOA
+     */
+    function isContract(address _resolverAddress) public view returns(bool) {
+        uint32 size;
+        assembly {
+            size := extcodesize(_resolverAddress)
+        }
+        return (size != 0);
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
