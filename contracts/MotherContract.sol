@@ -8,6 +8,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title RegistrarStorageMother
@@ -15,8 +18,9 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
  * @notice Core contract for managing unified IDs across multiple blockchains
  * @dev Optimized version with enum errors and gas optimizations
  */
-contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable {
+contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable {
     using SignatureVerifier for bytes32;
+    using SafeERC20 for IERC20;
 
     // === ERROR ENUMS FOR GAS OPTIMIZATION ===
     error E1(); // "Ownable: caller is not the owner"
@@ -54,16 +58,16 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     error E33(); // "Cannot set zero address as primary"
 
     // ==================== ROLE DEFINITIONS ====================
-    
+
     /// @notice Role for authorized relayers who can execute operations
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
-    
+
     /// @notice Role for admin users with elevated privileges
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    
+
     /// @notice Role for emergency operations
     bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
-    
+
     /// @notice Role for upgrading the contract
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
@@ -320,10 +324,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
         address currentPrimary = unifiedIds[unifiedId].chains[chainId].primary;
-        
+
         // EDGE CASE PROTECTION: Prevent setting the same primary address
         if (currentPrimary == newPrimary) revert E32();
-        
+
         // EDGE CASE PROTECTION: Prevent setting zero address as primary
         if (newPrimary == address(0)) revert E33();
 
@@ -458,7 +462,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
         if (!unifiedIds[oldUnifiedId].exists) revert E20();
         if (unifiedIds[newUnifiedId].exists) revert E21();
-        
+
         // EDGE CASE PROTECTION: Prevent updating to the same UnifiedId
         if (keccak256(bytes(oldUnifiedId)) == keccak256(bytes(newUnifiedId))) revert E31();
 
@@ -690,11 +694,11 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     ) {
         chainIds = unifiedIds[unifiedId].registeredChainIds;
         allAddressesPerChain = new address[][](chainIds.length);
-        
+
         for (uint256 i = 0; i < chainIds.length; ++i) {
             allAddressesPerChain[i] = resolver.getAllAddresses(unifiedId, chainIds[i]);
         }
-        
+
         return (chainIds, allAddressesPerChain);
     }
 
@@ -765,30 +769,60 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     receive() external payable {}
     fallback() external payable {}
 
-    function withdrawEth(address payable to, uint256 amount) external onlyOwner {
-        if (to == address(0)) revert E26();
-        if (amount > address(this).balance) revert E27();
+    /**
+  * @notice Withdraws ETH from the contract to a specified address
+ * @param to The address to send ETH to
+ * @param amount The amount of ETH to withdraw in wei
+ */
+    function withdrawEth(address payable to, uint256 amount) external onlyOwner nonReentrant {
+        require(to != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(amount <= address(this).balance, "Insufficient contract balance");
 
-        (bool success, ) = to.call{value: amount}("");
-        if (!success) revert E28();
-
+        // Emit event before external call (CEI pattern)
         emit EthWithdrawn(to, amount);
+
+        // Transfer with limited gas to prevent griefing
+        (bool success, ) = to.call{value: amount, gas: 50000}("");
+        require(success, "ETH transfer failed");
     }
+/**
+ * @notice Withdraws ERC20 tokens from the contract to a specified address
+ * @param token The ERC20 token contract address
+ * @param to The address to send tokens to
+ * @param amount The amount of tokens to withdraw (in token's smallest unit)
+ */
+    function withdrawERC20(address token, address to, uint256 amount) external onlyOwner nonReentrant {
+        // Validations
+        require(token != address(0), "Invalid token address");
+        require(to != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
 
-    function withdrawERC20(address token, address to, uint256 amount) external onlyOwner {
-        if (token == address(0)) revert E29();
-        if (to == address(0)) revert E26();
+        // Verify token is a contract
+        uint256 codeSize;
+        assembly { codeSize := extcodesize(token) }
+        require(codeSize > 0, "Token address is not a contract");
 
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(0xa9059cbb, to, amount)
-        );
-        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert E30();
+        // Check current balance
+        uint256 contractBalance = IERC20(token).balanceOf(address(this));
+        require(contractBalance >= amount, "Insufficient token balance");
 
-        emit ERC20Withdrawn(token, to, amount);
+        // Get balance before transfer (for fee-on-transfer tokens)
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
+        // Use SafeERC20 for safe transfer
+        IERC20(token).safeTransfer(to, amount);
+
+        // Calculate actual transferred amount (handles fee-on-transfer tokens)
+        uint256 balanceAfter = IERC20(token).balanceOf(address(this));
+        uint256 actualTransferred = balanceBefore - balanceAfter;
+
+        // Emit event with actual transferred amount
+        emit ERC20Withdrawn(token, to, actualTransferred);
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
-    
+
     /**
      * @notice Grant relayer role to an address
      * @param relayer Address to grant relayer role
