@@ -293,7 +293,6 @@ contract RegistrarStorageUtil is Initializable, UUPSUpgradeable, AccessControlUp
             uint256 tokenPriceInUSD = tokenInfo[0]; // Token USD price (Chainlink decimals = 8)
             uint256 tokenDecimals = tokenInfo[1];   // Token decimals (e.g., USDC = 6)
             uint256 ethPriceInUSD = tokenInfo[2];   // ETH USD price (Chainlink decimals = 8)
-            // Note: ethDecimals (tokenInfo[3]) not used in calculation as both prices are in 8 decimals
 
             require(tokenPriceInUSD > 0 && ethPriceInUSD > 0, "Invalid price data");
 
