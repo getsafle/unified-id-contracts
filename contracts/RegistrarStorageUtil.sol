@@ -359,7 +359,7 @@ contract RegistrarStorageUtil is AccessControl {
     /**
      * @notice Recovers the signer address from an Ethereum signed message hash and signature
      * @dev Uses ecrecover to extract the signer from the signature components
-     * @param _ethSignedMessageHash The hash of the signed message with Ethereum prefix
+     * @param hash The hash of the signed message with Ethereum prefix
      * @param _signature The signature bytes (65 bytes: r + s + v)
      * @return The address of the account that signed the message
      * @custom:requirements
@@ -369,21 +369,28 @@ contract RegistrarStorageUtil is AccessControl {
      * - "Invalid signature length" if signature is not 65 bytes
      * - "Invalid signature 'v' value" if v is not 27 or 28
      */
-    function recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) public pure returns (address) {
+    function recoverSigner(bytes32 hash, bytes memory _signature) public pure returns (address) {
         require(_signature.length == 65, "Invalid signature length");
         bytes32 r;
         bytes32 s;
         uint8 v;
+
         assembly {
             r := mload(add(_signature, 32))
             s := mload(add(_signature, 64))
             v := byte(0, mload(add(_signature, 96)))
         }
-        if (v < 27) {
-            v += 27;
-        }
+
+        // Enforce EIP-2: Prevent signature malleability by requiring low s-values
+        require(
+            uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
+            "Invalid signature 's' value"
+        );
+
+        // Check v-value is correct
         require(v == 27 || v == 28, "Invalid signature 'v' value");
-        return ecrecover(_ethSignedMessageHash, v, r, s);
+
+        return ecrecover(hash, v, r, s);
     }
 
     /// @notice EIP-712 domain separator type hash constant
@@ -464,9 +471,7 @@ contract RegistrarStorageUtil is AccessControl {
             messageHash
         ));
 
-        // Verify signature
-        address recoveredSigner = recoverSigner(getEthSignedMessageHash(keccak256(abi.encode(digest))), signature);
-        return recoveredSigner == signer;
+        return recoverSigner(digest, signature) == signer;
     }
 
     /**
