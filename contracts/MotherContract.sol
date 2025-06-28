@@ -201,14 +201,17 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function initialize(address _util, address _resolver) public initializer {
         if (_util == address(0)) revert E12();
         if (_resolver == address(0)) revert E13();
-        
-        // Validate contract addresses
-        require(_isContract(_util), "Util address is not a contract");
-        require(_isContract(_resolver), "Resolver address is not a contract");
 
         __UUPSUpgradeable_init();
         __Pausable_init();
         __AccessControl_init();
+
+        // Set util first so we can use its isContract function for validation
+        util = RegistrarStorageUtil(_util);
+        
+        // Validate contract addresses using util.isContract
+        require(util.isContract(_util), "Util address is not a contract");
+        require(util.isContract(_resolver), "Resolver address is not a contract");
 
         // Initialize EIP-712 domain separator with proxy address
         DOMAIN_SEPARATOR = SignatureVerifier.createDomainSeparator(
@@ -224,7 +227,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         _owner = msg.sender;
         emit OwnershipTransferred(address(0), msg.sender);
 
-        util = RegistrarStorageUtil(_util);
         resolver = IUnifiedIdResolver(_resolver);
 
         // Initialize packed config
@@ -254,7 +256,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
         if (_resolver == address(0)) revert E13();
-        require(_isContract(_resolver), "Resolver address is not a contract");
+        require(util.isContract(_resolver), "Resolver address is not a contract");
         
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
@@ -929,19 +931,4 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         return hasRole(UPGRADER_ROLE, account);
     }
 
-    // ==================== INTERNAL UTILITY FUNCTIONS ====================
-
-    /**
-     * @notice Checks if an address is a contract
-     * @dev Uses extcodesize to determine if address contains contract code
-     * @param addr Address to check
-     * @return True if address is a contract, false if EOA
-     */
-    function _isContract(address addr) internal view returns (bool) {
-        uint32 size;
-        assembly {
-            size := extcodesize(addr)
-        }
-        return (size != 0);
-    }
 }
