@@ -16,34 +16,34 @@ library SignatureVerifier {
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
     
-    /// @notice Register UnifiedID Type Hash
+    /// @notice Register UnifiedID Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant REGISTER_TYPEHASH = keccak256(
-        "RegisterUnifiedId(string unifiedId,address primaryAddress,uint256 nonce,uint256 deadline)"
+        "RegisterUnifiedId(string unifiedId,address primaryAddress,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
-    /// @notice Update UnifiedID Type Hash
+    /// @notice Update UnifiedID Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant UPDATE_UNIFIED_ID_TYPEHASH = keccak256(
-        "UpdateUnifiedId(string oldUnifiedId,string newUnifiedId,uint256 nonce,uint256 deadline)"
+        "UpdateUnifiedId(string oldUnifiedId,string newUnifiedId,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
-    /// @notice Update Primary Address Type Hash
+    /// @notice Update Primary Address Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant UPDATE_PRIMARY_TYPEHASH = keccak256(
-        "UpdatePrimaryAddress(string unifiedId,address newPrimaryAddress,uint256 nonce,uint256 deadline)"
+        "UpdatePrimaryAddress(string unifiedId,address newPrimaryAddress,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
-    /// @notice Add Secondary Address Type Hash
+    /// @notice Add Secondary Address Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant ADD_SECONDARY_TYPEHASH = keccak256(
-        "AddSecondaryAddress(string unifiedId,address secondaryAddress,uint256 nonce,uint256 deadline)"
+        "AddSecondaryAddress(string unifiedId,address secondaryAddress,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
-    /// @notice Remove Secondary Address Type Hash
+    /// @notice Remove Secondary Address Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant REMOVE_SECONDARY_TYPEHASH = keccak256(
-        "RemoveSecondaryAddress(string unifiedId,address secondaryAddress,uint256 nonce,uint256 deadline)"
+        "RemoveSecondaryAddress(string unifiedId,address secondaryAddress,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
-    /// @notice Update Master Address Type Hash
+    /// @notice Update Master Address Type Hash - NOW INCLUDES TARGET CHAIN ID
     bytes32 public constant UPDATE_MASTER_TYPEHASH = keccak256(
-        "UpdateMasterAddress(string unifiedId,address newMasterAddress,uint256 nonce,uint256 deadline)"
+        "UpdateMasterAddress(string unifiedId,address newMasterAddress,uint256 targetChainId,uint256 nonce,uint256 deadline)"
     );
     
     // ==================== STRUCTS ====================
@@ -52,6 +52,14 @@ library SignatureVerifier {
     struct SignatureData {
         uint256 nonce;
         uint256 deadline;
+        bytes signature;
+    }
+    
+    /// @notice Enhanced signature data structure with target chain ID
+    struct EnhancedSignatureData {
+        uint256 nonce;
+        uint256 deadline;
+        uint256 targetChainId;
         bytes signature;
     }
     
@@ -69,6 +77,7 @@ library SignatureVerifier {
     error InvalidSignature();
     error InvalidSignatureLength();
     error InvalidNonce();
+    error InvalidTargetChainId();
     
     // ==================== CORE FUNCTIONS ====================
     
@@ -141,15 +150,230 @@ library SignatureVerifier {
         return recoveredSigner == signer;
     }
     
+    /**
+     * @notice Verifies EIP-712 signature with target chain ID validation
+     * @param domainSeparator Domain separator for the contract
+     * @param structHash Hash of the typed data struct
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data including target chain ID
+     * @return True if signature is valid
+     */
+    function verifyEnhancedSignature(
+        bytes32 domainSeparator,
+        bytes32 structHash,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        // Check deadline
+        if (block.timestamp > sigData.deadline) revert SignatureExpired();
+        
+        // CRITICAL: Verify target chain ID matches current chain
+        if (sigData.targetChainId != block.chainid) revert InvalidTargetChainId();
+        
+        // Create EIP-712 digest
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            domainSeparator,
+            structHash
+        ));
+        
+        // Recover and verify signer
+        address recoveredSigner = recoverSigner(digest, sigData.signature);
+        return recoveredSigner == signer;
+    }
+    
     // ==================== OPERATION-SPECIFIC VERIFICATION ====================
     
     /**
-     * @notice Verifies signature for registering a UnifiedID
+     * @notice Verifies signature for registering a UnifiedID with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param unifiedId UnifiedID to register
+     * @param primaryAddress Primary address for the UnifiedID
+     * @param targetChainId Target chain ID for the registration
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyRegisterSignature(
+        bytes32 domainSeparator,
+        string memory unifiedId,
+        address primaryAddress,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            REGISTER_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            primaryAddress,
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    /**
+     * @notice Verifies signature for updating a UnifiedID with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param oldUnifiedId Current UnifiedID
+     * @param newUnifiedId New UnifiedID
+     * @param targetChainId Target chain ID for the update
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyUpdateUnifiedIdSignature(
+        bytes32 domainSeparator,
+        string memory oldUnifiedId,
+        string memory newUnifiedId,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            UPDATE_UNIFIED_ID_TYPEHASH,
+            keccak256(bytes(oldUnifiedId)),
+            keccak256(bytes(newUnifiedId)),
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    /**
+     * @notice Verifies signature for updating primary address with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param unifiedId UnifiedID
+     * @param newPrimaryAddress New primary address
+     * @param targetChainId Target chain ID for the update
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyUpdatePrimarySignature(
+        bytes32 domainSeparator,
+        string memory unifiedId,
+        address newPrimaryAddress,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            UPDATE_PRIMARY_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            newPrimaryAddress,
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    /**
+     * @notice Verifies signature for adding secondary address with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param unifiedId UnifiedID
+     * @param secondaryAddress Secondary address to add
+     * @param targetChainId Target chain ID for the operation
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyAddSecondarySignature(
+        bytes32 domainSeparator,
+        string memory unifiedId,
+        address secondaryAddress,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            ADD_SECONDARY_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            secondaryAddress,
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    /**
+     * @notice Verifies signature for removing secondary address with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param unifiedId UnifiedID
+     * @param secondaryAddress Secondary address to remove
+     * @param targetChainId Target chain ID for the operation
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyRemoveSecondarySignature(
+        bytes32 domainSeparator,
+        string memory unifiedId,
+        address secondaryAddress,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            REMOVE_SECONDARY_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            secondaryAddress,
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    /**
+     * @notice Verifies signature for updating master address with chain ID protection
+     * @param domainSeparator Domain separator
+     * @param unifiedId UnifiedID
+     * @param newMasterAddress New master address
+     * @param targetChainId Target chain ID for the operation
+     * @param signer Expected signer address
+     * @param sigData Enhanced signature data
+     * @return True if signature is valid
+     */
+    function verifyUpdateMasterSignature(
+        bytes32 domainSeparator,
+        string memory unifiedId,
+        address newMasterAddress,
+        uint256 targetChainId,
+        address signer,
+        EnhancedSignatureData memory sigData
+    ) internal view returns (bool) {
+        bytes32 structHash = keccak256(abi.encode(
+            UPDATE_MASTER_TYPEHASH,
+            keccak256(bytes(unifiedId)),
+            newMasterAddress,
+            targetChainId,
+            sigData.nonce,
+            sigData.deadline
+        ));
+        
+        return verifyEnhancedSignature(domainSeparator, structHash, signer, sigData);
+    }
+    
+    // ==================== BACKWARD COMPATIBILITY ====================
+    
+    /**
+     * @notice Legacy verification functions for backward compatibility
+     * @dev These functions maintain the old behavior for existing integrations
      * @param domainSeparator Domain separator
      * @param unifiedId UnifiedID to register
      * @param primaryAddress Primary address for the UnifiedID
      * @param signer Expected signer address
-     * @param sigData Signature data
+     * @param sigData Legacy signature data
      * @return True if signature is valid
      */
     function verifyRegisterSignature(
@@ -159,25 +383,26 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            REGISTER_TYPEHASH,
-            keccak256(bytes(unifiedId)),
-            primaryAddress,
-            sigData.nonce,
-            sigData.deadline
-        ));
+        // Convert to enhanced signature data with current chain ID
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyRegisterSignature(
+            domainSeparator,
+            unifiedId,
+            primaryAddress,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
     
     /**
-     * @notice Verifies signature for updating a UnifiedID
-     * @param domainSeparator Domain separator
-     * @param oldUnifiedId Current UnifiedID
-     * @param newUnifiedId New UnifiedID
-     * @param signer Expected signer address
-     * @param sigData Signature data
-     * @return True if signature is valid
+     * @notice Legacy verification for updating UnifiedID
      */
     function verifyUpdateUnifiedIdSignature(
         bytes32 domainSeparator,
@@ -186,25 +411,25 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            UPDATE_UNIFIED_ID_TYPEHASH,
-            keccak256(bytes(oldUnifiedId)),
-            keccak256(bytes(newUnifiedId)),
-            sigData.nonce,
-            sigData.deadline
-        ));
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyUpdateUnifiedIdSignature(
+            domainSeparator,
+            oldUnifiedId,
+            newUnifiedId,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
     
     /**
-     * @notice Verifies signature for updating primary address
-     * @param domainSeparator Domain separator
-     * @param unifiedId UnifiedID
-     * @param newPrimaryAddress New primary address
-     * @param signer Expected signer address
-     * @param sigData Signature data
-     * @return True if signature is valid
+     * @notice Legacy verification for updating primary address
      */
     function verifyUpdatePrimarySignature(
         bytes32 domainSeparator,
@@ -213,25 +438,25 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            UPDATE_PRIMARY_TYPEHASH,
-            keccak256(bytes(unifiedId)),
-            newPrimaryAddress,
-            sigData.nonce,
-            sigData.deadline
-        ));
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyUpdatePrimarySignature(
+            domainSeparator,
+            unifiedId,
+            newPrimaryAddress,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
     
     /**
-     * @notice Verifies signature for adding secondary address
-     * @param domainSeparator Domain separator
-     * @param unifiedId UnifiedID
-     * @param secondaryAddress Secondary address to add
-     * @param signer Expected signer address
-     * @param sigData Signature data
-     * @return True if signature is valid
+     * @notice Legacy verification for adding secondary address
      */
     function verifyAddSecondarySignature(
         bytes32 domainSeparator,
@@ -240,25 +465,25 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            ADD_SECONDARY_TYPEHASH,
-            keccak256(bytes(unifiedId)),
-            secondaryAddress,
-            sigData.nonce,
-            sigData.deadline
-        ));
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyAddSecondarySignature(
+            domainSeparator,
+            unifiedId,
+            secondaryAddress,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
     
     /**
-     * @notice Verifies signature for removing secondary address
-     * @param domainSeparator Domain separator
-     * @param unifiedId UnifiedID
-     * @param secondaryAddress Secondary address to remove
-     * @param signer Expected signer address
-     * @param sigData Signature data
-     * @return True if signature is valid
+     * @notice Legacy verification for removing secondary address
      */
     function verifyRemoveSecondarySignature(
         bytes32 domainSeparator,
@@ -267,25 +492,25 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            REMOVE_SECONDARY_TYPEHASH,
-            keccak256(bytes(unifiedId)),
-            secondaryAddress,
-            sigData.nonce,
-            sigData.deadline
-        ));
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyRemoveSecondarySignature(
+            domainSeparator,
+            unifiedId,
+            secondaryAddress,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
     
     /**
-     * @notice Verifies signature for updating master address
-     * @param domainSeparator Domain separator
-     * @param unifiedId UnifiedID
-     * @param newMasterAddress New master address
-     * @param signer Expected signer address
-     * @param sigData Signature data
-     * @return True if signature is valid
+     * @notice Legacy verification for updating master address
      */
     function verifyUpdateMasterSignature(
         bytes32 domainSeparator,
@@ -294,14 +519,20 @@ library SignatureVerifier {
         address signer,
         SignatureData memory sigData
     ) internal view returns (bool) {
-        bytes32 structHash = keccak256(abi.encode(
-            UPDATE_MASTER_TYPEHASH,
-            keccak256(bytes(unifiedId)),
-            newMasterAddress,
-            sigData.nonce,
-            sigData.deadline
-        ));
+        EnhancedSignatureData memory enhancedSigData = EnhancedSignatureData({
+            nonce: sigData.nonce,
+            deadline: sigData.deadline,
+            targetChainId: block.chainid,
+            signature: sigData.signature
+        });
         
-        return verifySignature(domainSeparator, structHash, signer, sigData);
+        return verifyUpdateMasterSignature(
+            domainSeparator,
+            unifiedId,
+            newMasterAddress,
+            block.chainid,
+            signer,
+            enhancedSigData
+        );
     }
 } 
