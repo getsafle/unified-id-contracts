@@ -16,7 +16,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
  * @title RegistrarStorageMother
  * @author kunalmkv
  * @notice Core contract for managing unified IDs across multiple blockchains
- * @dev Optimized version with enum errors and gas optimizations
+ * @dev Optimized version with enum errors, gas optimizations, and race condition protection
  */
 contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable {
     using SignatureVerifier for bytes32;
@@ -56,6 +56,9 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     error E31(); // "Cannot update to same UnifiedId"
     error E32(); // "Cannot set same primary address"
     error E33(); // "Cannot set zero address as primary"
+    error E34(); // "Operation in progress - try again later"
+    error E35(); // "Invalid nonce sequence"
+    error E36(); // "Target chain ID mismatch"
 
     // ==================== ROLE DEFINITIONS ====================
 
@@ -96,6 +99,27 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     mapping(string => UnifiedID) private unifiedIds;
     mapping(string => bool) public isUnavailableUnifiedId;
     mapping(string => uint256) public nonces;
+
+    // === RACE CONDITION PROTECTION ===
+    
+    /// @notice Tracks ongoing operations to prevent race conditions
+    mapping(string => bool) private operationLocks;
+    
+    /// @notice Tracks the last operation timestamp for each UnifiedID
+    mapping(string => uint256) private lastOperationTimestamp;
+    
+    /// @notice Minimum time between operations on the same UnifiedID (in seconds)
+    uint256 public constant OPERATION_COOLDOWN = 1; // 1 second cooldown
+    
+    /// @notice Operation types for enhanced logging
+    enum OperationType {
+        REGISTER,
+        UPDATE_UNIFIED_ID,
+        UPDATE_PRIMARY,
+        ADD_SECONDARY,
+        REMOVE_SECONDARY,
+        UPDATE_MASTER
+    }
 
     // Packed configuration struct for gas optimization
     struct PackedConfig {
@@ -138,6 +162,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     event SecondaryAddressRemoved(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
     event EthWithdrawn(address indexed to, uint256 amount);
     event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
+    event OperationLocked(string indexed unifiedId, OperationType indexed operationType, address indexed operator);
+    event OperationUnlocked(string indexed unifiedId, OperationType indexed operationType, address indexed operator);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -162,6 +188,42 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     modifier onlyRelayer() {
         require(hasRole(RELAYER_ROLE, msg.sender), "AccessControl: caller is not relayer");
+        _;
+    }
+
+    /// @notice Prevents race conditions by locking operations on a UnifiedID
+    modifier operationLock(string calldata unifiedId, OperationType operationType) {
+        // Check if operation is already in progress
+        if (operationLocks[unifiedId]) revert E34();
+        
+        // Check cooldown period
+        if (block.timestamp < lastOperationTimestamp[unifiedId] + OPERATION_COOLDOWN) revert E34();
+        
+        // Lock the operation
+        operationLocks[unifiedId] = true;
+        lastOperationTimestamp[unifiedId] = block.timestamp;
+        
+        emit OperationLocked(unifiedId, operationType, msg.sender);
+        
+        _;
+        
+        // Unlock the operation
+        operationLocks[unifiedId] = false;
+        emit OperationUnlocked(unifiedId, operationType, msg.sender);
+    }
+
+    /// @notice Enhanced nonce validation with additional checks
+    modifier validateNonce(string calldata unifiedId, uint256 providedNonce) {
+        uint256 currentNonce = nonces[unifiedId];
+        
+        // Check exact nonce match
+        if (providedNonce != currentNonce) revert E35();
+        
+        // Increment nonce atomically
+        unchecked {
+            nonces[unifiedId] = currentNonce + 1;
+        }
+        
         _;
     }
 
@@ -205,6 +267,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         __UUPSUpgradeable_init();
         __Pausable_init();
         __AccessControl_init();
+        __ReentrancyGuard_init();
 
         // Set util first so we can use its isContract function for validation
         util = RegistrarStorageUtil(_util);
@@ -274,7 +337,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         address primary,
         SignatureVerifier.SignatureData calldata masterSigData,
         SignatureVerifier.SignatureData calldata primarySigData
-    ) external onlyRelayer whenNotPaused notInEmergencyMode {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(unifiedId, OperationType.REGISTER) 
+      validateNonce(unifiedId, primarySigData.nonce) {
+        
         if (isUnavailableUnifiedId[unifiedId]) revert E7();
 
         UnifiedID storage uid = unifiedIds[unifiedId];
@@ -283,7 +349,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         if (chainData.exists) revert E15();
         if (uid.registeredChainIds.length >= config.maxChainsPerUnifiedId) revert E16();
 
-        // Verify primary signature
+        // Verify primary signature with chain ID protection
         if (!SignatureVerifier.verifyRegisterSignature(
             DOMAIN_SEPARATOR,
             unifiedId,
@@ -292,12 +358,16 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             primarySigData
         )) revert E23();
 
-        // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
-        nonces[unifiedId]++;
-
         if (!uid.exists) {
             // New UnifiedID
+            if (!SignatureVerifier.verifyRegisterSignature(
+                DOMAIN_SEPARATOR,
+                unifiedId,
+                primary,
+                primary, // Master is same as primary for new registrations
+                masterSigData
+            )) revert E23();
+            
             uid.masterAddress = primary;
             uid.exists = true;
         } else {
@@ -327,7 +397,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         address newPrimary,
         SignatureVerifier.SignatureData calldata currentSigData,
         SignatureVerifier.SignatureData calldata newSigData
-    ) external onlyRelayer whenNotPaused {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(unifiedId, OperationType.UPDATE_PRIMARY) 
+      validateNonce(unifiedId, currentSigData.nonce) {
+        
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
@@ -339,7 +412,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // EDGE CASE PROTECTION: Prevent setting zero address as primary
         if (newPrimary == address(0)) revert E33();
 
-        // Verify both signatures
+        // Verify both signatures with chain ID protection
         if (!SignatureVerifier.verifyUpdatePrimarySignature(
             DOMAIN_SEPARATOR,
             unifiedId,
@@ -356,10 +429,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             newSigData
         )) revert E23();
 
-        // Update nonce
-        if (currentSigData.nonce != nonces[unifiedId]) revert E23();
-        nonces[unifiedId]++;
-
         unifiedIds[unifiedId].chains[chainId].primary = newPrimary;
 
         // Update resolver
@@ -374,7 +443,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         address secondary,
         SignatureVerifier.SignatureData calldata primarySigData,
         SignatureVerifier.SignatureData calldata secondarySigData
-    ) external onlyRelayer whenNotPaused {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(unifiedId, OperationType.ADD_SECONDARY) 
+      validateNonce(unifiedId, primarySigData.nonce) {
+        
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
@@ -390,7 +462,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             if (chainData.secondaries[i] == secondary) revert E18();
         }
 
-        // Verify signatures
+        // Verify signatures with chain ID protection
         if (!SignatureVerifier.verifyAddSecondarySignature(
             DOMAIN_SEPARATOR,
             unifiedId,
@@ -407,10 +479,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             secondarySigData
         )) revert E23();
 
-        // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
-        nonces[unifiedId]++;
-
         chainData.secondaries.push(secondary);
 
         // Update resolver
@@ -424,13 +492,16 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         uint256 chainId,
         address secondary,
         SignatureVerifier.SignatureData calldata sigData
-    ) external onlyRelayer whenNotPaused {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(unifiedId, OperationType.REMOVE_SECONDARY) 
+      validateNonce(unifiedId, sigData.nonce) {
+        
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
         address primary = unifiedIds[unifiedId].chains[chainId].primary;
 
-        // Verify signature
+        // Verify signature with chain ID protection
         if (!SignatureVerifier.verifyRemoveSecondarySignature(
             DOMAIN_SEPARATOR,
             unifiedId,
@@ -438,10 +509,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             primary,
             sigData
         )) revert E23();
-
-        // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
-        nonces[unifiedId]++;
 
         ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
 
@@ -465,7 +532,10 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata oldUnifiedId,
         string calldata newUnifiedId,
         SignatureVerifier.SignatureData calldata sigData
-    ) external onlyRelayer whenNotPaused {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(oldUnifiedId, OperationType.UPDATE_UNIFIED_ID) 
+      validateNonce(oldUnifiedId, sigData.nonce) {
+        
         if (isUnavailableUnifiedId[oldUnifiedId]) revert E7();
         if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
         if (!unifiedIds[oldUnifiedId].exists) revert E20();
@@ -476,7 +546,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
 
-        // Verify signature
+        // Verify signature with chain ID protection
         if (!SignatureVerifier.verifyUpdateUnifiedIdSignature(
             DOMAIN_SEPARATOR,
             oldUnifiedId,
@@ -485,8 +555,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             sigData
         )) revert E23();
 
-        // Update nonce
-        if (sigData.nonce != nonces[oldUnifiedId]) revert E23();
+        // Transfer nonce to new UnifiedID
         nonces[newUnifiedId] = nonces[oldUnifiedId] + 1;
         delete nonces[oldUnifiedId];
 
@@ -563,12 +632,15 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         address newMasterAddress,
         SignatureVerifier.SignatureData calldata sigData
-    ) external onlyRelayer whenNotPaused {
+    ) external onlyRelayer whenNotPaused notInEmergencyMode 
+      operationLock(unifiedId, OperationType.UPDATE_MASTER) 
+      validateNonce(unifiedId, sigData.nonce) {
+        
         if (!unifiedIds[unifiedId].exists) revert E4();
 
         address currentMasterAddress = unifiedIds[unifiedId].masterAddress;
 
-        // Verify signature
+        // Verify signature with chain ID protection
         if (!SignatureVerifier.verifyUpdateMasterSignature(
             DOMAIN_SEPARATOR,
             unifiedId,
@@ -576,10 +648,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             currentMasterAddress,
             sigData
         )) revert E23();
-
-        // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
-        nonces[unifiedId]++;
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
 
@@ -633,6 +701,28 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function resolveAllAddresses(string calldata unifiedId, uint256 chainId)
     external view returns (address primary, address[] memory secondaries) {
         return resolver.getAddresses(unifiedId, chainId);
+    }
+
+    /// @notice Check if a UnifiedID operation is currently locked
+    function isOperationLocked(string calldata unifiedId) external view returns (bool) {
+        return operationLocks[unifiedId];
+    }
+
+    /// @notice Get the last operation timestamp for a UnifiedID
+    function getLastOperationTimestamp(string calldata unifiedId) external view returns (uint256) {
+        return lastOperationTimestamp[unifiedId];
+    }
+
+    /// @notice Get the remaining cooldown time for a UnifiedID
+    function getRemainingCooldownTime(string calldata unifiedId) external view returns (uint256) {
+        uint256 lastOp = lastOperationTimestamp[unifiedId];
+        uint256 cooldownEnd = lastOp + OPERATION_COOLDOWN;
+        
+        if (block.timestamp >= cooldownEnd) {
+            return 0;
+        }
+        
+        return cooldownEnd - block.timestamp;
     }
 
     // ==================== COMBINED ADDRESS FUNCTIONS ====================
@@ -760,6 +850,12 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         }
 
         emit EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender);
+    }
+
+    /// @notice Emergency function to unlock operations if needed
+    function emergencyUnlockOperation(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
+        operationLocks[_unifiedId] = false;
+        emit OperationUnlocked(_unifiedId, OperationType.REGISTER, msg.sender); // Using REGISTER as generic type
     }
 
     function getConfiguration() external view returns (
