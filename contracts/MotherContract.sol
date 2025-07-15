@@ -3,7 +3,8 @@ pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "./IUnifiedIdResolver.sol";
-import "./SignatureVerifier.sol";
+import "./MotherContractEvents.sol";
+import "./MotherContractHelpers.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -16,11 +17,12 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
  * @title RegistrarStorageMother
  * @author kunalmkv
  * @notice Core contract for managing unified IDs across multiple blockchains
- * @dev Optimized version with enum errors and gas optimizations
+ * @dev Optimized version with libraries to reduce contract size
  */
-contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable {
-    using SignatureVerifier for bytes32;
+contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
+    using MotherContractEvents for *;
+    using MotherContractHelpers for *;
 
     // === ERROR ENUMS FOR GAS OPTIMIZATION ===
     error E1(); // "Ownable: caller is not the owner"
@@ -80,64 +82,12 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     address private _pendingOwner;
 
     // Core storage structures
-    struct ChainData {
-        address primary;
-        address[] secondaries;
-        bool exists;
-    }
-
-    struct UnifiedID {
-        address masterAddress;
-        mapping(uint256 => ChainData) chains;
-        uint256[] registeredChainIds;
-        bool exists;
-    }
-
-    mapping(string => UnifiedID) private unifiedIds;
+    mapping(string => MotherContractHelpers.UnifiedID) private unifiedIds;
     mapping(string => bool) public isUnavailableUnifiedId;
     mapping(string => uint256) public nonces;
 
     // Packed configuration struct for gas optimization
-    struct PackedConfig {
-        uint128 maxSecondaryAddressesPerChain;
-        uint128 maxChainsPerUnifiedId;
-        bool emergencyMode;
-    }
-
-    PackedConfig public config;
-
-    // EIP-712 constants
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-    );
-
-    bytes32 public constant REGISTER_TYPEHASH = keccak256(
-        "RegisterUnifiedId(string unifiedId,address primary,uint256 chainId,uint256 nonce)"
-    );
-
-    bytes32 public DOMAIN_SEPARATOR;
-
-    // === EVENTS ===
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event MaxSecondaryAddressesPerChainUpdated(uint256 oldMax, uint256 newMax);
-    event MaxChainsPerUnifiedIdUpdated(uint256 oldMax, uint256 newMax);
-    event EmergencyModeToggled(bool enabled);
-    event ResolverUpdated(address indexed oldResolver, address indexed newResolver, address indexed updatedBy);
-    event ContractPaused(address indexed pausedBy, uint256 timestamp);
-    event ContractUnpaused(address indexed unpausedBy, uint256 timestamp);
-    event RelayerAuthorizationUpdated(address indexed relayer, bool authorized);
-    event UpgradeAuthorized(address indexed newImplementation, address indexed authorizedBy, uint256 timestamp);
-    event EmergencyUnifiedIdMarked(string indexed unifiedId, bool available, address indexed updatedBy);
-    event EmergencyChainDataCleared(string indexed unifiedId, uint256 indexed chainId, address indexed clearedBy);
-    event UnifiedIdRegistered(string indexed unifiedId, address indexed masterAddress, uint256 indexed chainId, address primary);
-    event UnifiedIdUpdated(string indexed newUnifiedId, string indexed oldUnifiedId);
-    event MasterAddressUpdated(string indexed unifiedId, address indexed newMasterAddress);
-    event PrimaryAddressUpdated(string indexed unifiedId, uint256 indexed chainId, address indexed newPrimary);
-    event SecondaryAddressAdded(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
-    event SecondaryAddressRemoved(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
-    event EthWithdrawn(address indexed to, uint256 amount);
-    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
+    MotherContractHelpers.PackedConfig public config;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -165,6 +115,15 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         _;
     }
 
+    // === SIMPLE SIGNATURE VERIFICATION MODIFIER ===
+    modifier verifySignature(bytes memory data, address expectedSigner, bytes memory signature) {
+        (string memory unifiedId, ) = abi.decode(data, (string, address));
+        uint256 nonce = nonces[unifiedId];
+        bytes memory dataWithNonce = abi.encodePacked(data, nonce);
+        require(util.verifySignature(dataWithNonce, expectedSigner, signature), "Invalid signature");
+        _;
+    }
+
     // === OWNABLE2STEP IMPLEMENTATION ===
     function owner() public view virtual returns (address) {
         return _owner;
@@ -181,7 +140,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function transferOwnership(address newOwner) public virtual onlyOwner {
         if (newOwner == address(0)) revert E2();
         _pendingOwner = newOwner;
-        emit OwnershipTransferStarted(owner(), newOwner);
+        emit MotherContractEvents.OwnershipTransferStarted(owner(), newOwner, block.timestamp);
     }
 
     function acceptOwnership() external {
@@ -194,7 +153,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         delete _pendingOwner;
         address oldOwner = _owner;
         _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
+        emit MotherContractEvents.OwnershipTransferred(oldOwner, newOwner, block.timestamp);
     }
 
     // === INITIALIZATION ===
@@ -205,6 +164,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         __UUPSUpgradeable_init();
         __Pausable_init();
         __AccessControl_init();
+        __ReentrancyGuard_init();
 
         // Set util first so we can use its isContract function for validation
         util = RegistrarStorageUtil(_util);
@@ -213,24 +173,14 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         require(util.isContract(_util), "Util address is not a contract");
         require(util.isContract(_resolver), "Resolver address is not a contract");
 
-        // Initialize EIP-712 domain separator with proxy address
-        DOMAIN_SEPARATOR = SignatureVerifier.createDomainSeparator(
-            SignatureVerifier.DomainData({
-                name: "UnifiedID",
-                version: "1",
-                chainId: block.chainid,
-                verifyingContract: address(this)
-            })
-        );
-
         // Initialize ownership
         _owner = msg.sender;
-        emit OwnershipTransferred(address(0), msg.sender);
+        emit MotherContractEvents.OwnershipTransferred(address(0), msg.sender, block.timestamp);
 
         resolver = IUnifiedIdResolver(_resolver);
 
         // Initialize packed config
-        config = PackedConfig({
+        config = MotherContractHelpers.PackedConfig({
             maxSecondaryAddressesPerChain: 10,
             maxChainsPerUnifiedId: 50,
             emergencyMode: false
@@ -246,12 +196,12 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     // === CORE FUNCTIONS ===
     function pause() external onlyRole(ADMIN_ROLE) {
         _pause();
-        emit ContractPaused(msg.sender, block.timestamp);
+        emit MotherContractEvents.ContractPaused(msg.sender, block.timestamp);
     }
 
     function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
-        emit ContractUnpaused(msg.sender, block.timestamp);
+        emit MotherContractEvents.ContractUnpaused(msg.sender, block.timestamp);
     }
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
@@ -260,40 +210,33 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
-        emit ResolverUpdated(oldResolver, _resolver, msg.sender);
+        emit MotherContractEvents.ResolverUpdated(oldResolver, _resolver, msg.sender, block.timestamp);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override {
         require(hasRole(UPGRADER_ROLE, msg.sender) || msg.sender == owner(), "AccessControl: caller is not upgrader");
-        emit UpgradeAuthorized(newImplementation, msg.sender, block.timestamp);
+        emit MotherContractEvents.UpgradeAuthorized(newImplementation, msg.sender, block.timestamp);
     }
 
     function registerUnifiedId(
         string calldata unifiedId,
         uint256 chainId,
         address primary,
-        SignatureVerifier.SignatureData calldata masterSigData,
-        SignatureVerifier.SignatureData calldata primarySigData
+        bytes calldata masterSignature,
+        bytes calldata primarySignature
     ) external onlyRelayer whenNotPaused notInEmergencyMode {
         if (isUnavailableUnifiedId[unifiedId]) revert E7();
 
-        UnifiedID storage uid = unifiedIds[unifiedId];
-        ChainData storage chainData = uid.chains[chainId];
+        MotherContractHelpers.UnifiedID storage uid = unifiedIds[unifiedId];
+        MotherContractHelpers.ChainData storage chainData = uid.chains[chainId];
 
         if (chainData.exists) revert E15();
         if (uid.registeredChainIds.length >= config.maxChainsPerUnifiedId) revert E16();
 
-        // Verify primary signature
-        if (!SignatureVerifier.verifyRegisterSignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            primary,
-            primary,
-            primarySigData
-        )) revert E23();
+        bytes memory primaryData = abi.encode(unifiedId, primary);
+        if (!util.verifySignature(abi.encodePacked(primaryData, nonces[unifiedId]), primary, primarySignature)) revert E23();
 
         // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         if (!uid.exists) {
@@ -302,13 +245,9 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             uid.exists = true;
         } else {
             // Existing UnifiedID - verify master signature
-            if (!SignatureVerifier.verifyRegisterSignature(
-                DOMAIN_SEPARATOR,
-                unifiedId,
-                primary,
-                uid.masterAddress,
-                masterSigData
-            )) revert E23();
+            if (masterSignature.length > 0) {
+                if (!util.verifySignature(abi.encodePacked(primaryData, nonces[unifiedId] - 1), uid.masterAddress, masterSignature)) revert E23();
+            }
         }
 
         chainData.primary = primary;
@@ -318,15 +257,15 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.setUnifiedIdPrimaryAddress(unifiedId, chainId, primary);
 
-        emit UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary);
+        emit MotherContractEvents.UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary, block.timestamp);
     }
 
     function updatePrimaryAddress(
         string calldata unifiedId,
         uint256 chainId,
         address newPrimary,
-        SignatureVerifier.SignatureData calldata currentSigData,
-        SignatureVerifier.SignatureData calldata newSigData
+        bytes calldata currentSignature,
+        bytes calldata newSignature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
@@ -339,25 +278,13 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // EDGE CASE PROTECTION: Prevent setting zero address as primary
         if (newPrimary == address(0)) revert E33();
 
-        // Verify both signatures
-        if (!SignatureVerifier.verifyUpdatePrimarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newPrimary,
-            currentPrimary,
-            currentSigData
-        )) revert E23();
-
-        if (!SignatureVerifier.verifyUpdatePrimarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newPrimary,
-            newPrimary,
-            newSigData
-        )) revert E23();
+        bytes memory data = abi.encode(unifiedId, newPrimary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), currentPrimary, currentSignature)) revert E23();
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), newPrimary, newSignature)) revert E23();
 
         // Update nonce
-        if (currentSigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         unifiedIds[unifiedId].chains[chainId].primary = newPrimary;
@@ -365,15 +292,15 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.updateUnifiedIdPrimaryAddress(unifiedId, chainId, newPrimary);
 
-        emit PrimaryAddressUpdated(unifiedId, chainId, newPrimary);
+        emit MotherContractEvents.PrimaryAddressUpdated(unifiedId, chainId, currentPrimary, newPrimary, block.timestamp);
     }
 
     function addSecondaryAddress(
         string calldata unifiedId,
         uint256 chainId,
         address secondary,
-        SignatureVerifier.SignatureData calldata primarySigData,
-        SignatureVerifier.SignatureData calldata secondarySigData
+        bytes calldata primarySignature,
+        bytes calldata secondarySignature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
@@ -382,7 +309,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         if (primary == secondary) revert E17();
 
-        ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
+        MotherContractHelpers.ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
         if (chainData.secondaries.length >= config.maxSecondaryAddressesPerChain) revert E19();
 
         // Check for duplicates
@@ -390,25 +317,13 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             if (chainData.secondaries[i] == secondary) revert E18();
         }
 
-        // Verify signatures
-        if (!SignatureVerifier.verifyAddSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            primary,
-            primarySigData
-        )) revert E23();
-
-        if (!SignatureVerifier.verifyAddSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            secondary,
-            secondarySigData
-        )) revert E23();
+        bytes memory data = abi.encode(unifiedId, secondary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), primary, primarySignature)) revert E23();
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), secondary, secondarySignature)) revert E23();
 
         // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         chainData.secondaries.push(secondary);
@@ -416,34 +331,29 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.addUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
-        emit SecondaryAddressAdded(unifiedId, chainId, secondary);
+        emit MotherContractEvents.SecondaryAddressAdded(unifiedId, chainId, secondary, block.timestamp);
     }
 
     function removeSecondaryAddress(
         string calldata unifiedId,
         uint256 chainId,
         address secondary,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
         address primary = unifiedIds[unifiedId].chains[chainId].primary;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyRemoveSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            primary,
-            sigData
-        )) revert E23();
+        bytes memory data = abi.encode(unifiedId, secondary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), primary, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
-        ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
+        MotherContractHelpers.ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
 
         if (chainData.secondaries.length > config.maxSecondaryAddressesPerChain) revert E22();
 
@@ -455,7 +365,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
                 // Update resolver
                 resolver.removeUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
-                emit SecondaryAddressRemoved(unifiedId, chainId, secondary);
+                emit MotherContractEvents.SecondaryAddressRemoved(unifiedId, chainId, secondary, block.timestamp);
                 break;
             }
         }
@@ -464,7 +374,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function updateUnifiedId(
         string calldata oldUnifiedId,
         string calldata newUnifiedId,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (isUnavailableUnifiedId[oldUnifiedId]) revert E7();
         if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
@@ -476,17 +386,12 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyUpdateUnifiedIdSignature(
-            DOMAIN_SEPARATOR,
-            oldUnifiedId,
-            newUnifiedId,
-            masterAddress,
-            sigData
-        )) revert E23();
+        bytes memory data = abi.encode(oldUnifiedId, newUnifiedId);
+        uint256 currentNonce = nonces[oldUnifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), masterAddress, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[oldUnifiedId]) revert E23();
         nonces[newUnifiedId] = nonces[oldUnifiedId] + 1;
         delete nonces[oldUnifiedId];
 
@@ -495,17 +400,17 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     }
 
     function _transferUnifiedIdData(string memory oldUnifiedId, string memory newUnifiedId) internal {
-        UnifiedID storage existing = unifiedIds[oldUnifiedId];
+        MotherContractHelpers.UnifiedID storage existing = unifiedIds[oldUnifiedId];
         uint256[] memory chainIds = existing.registeredChainIds;
 
-        UnifiedID storage updated = unifiedIds[newUnifiedId];
+        MotherContractHelpers.UnifiedID storage updated = unifiedIds[newUnifiedId];
         updated.masterAddress = existing.masterAddress;
         updated.exists = true;
 
         for (uint256 i = 0; i < chainIds.length; ++i) {
             uint256 cid = chainIds[i];
-            ChainData storage existingChain = existing.chains[cid];
-            ChainData storage newChain = updated.chains[cid];
+            MotherContractHelpers.ChainData storage existingChain = existing.chains[cid];
+            MotherContractHelpers.ChainData storage newChain = updated.chains[cid];
 
             newChain.primary = existingChain.primary;
             newChain.exists = existingChain.exists;
@@ -526,7 +431,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         }
     }
 
-    function _updateResolverForNewUnifiedId(string memory newUnifiedId, uint256 chainId, ChainData storage chainData) internal {
+    function _updateResolverForNewUnifiedId(string memory newUnifiedId, uint256 chainId, MotherContractHelpers.ChainData storage chainData) internal {
         if (chainData.primary != address(0)) {
             resolver.setUnifiedIdPrimaryAddress(newUnifiedId, chainId, chainData.primary);
 
@@ -556,34 +461,29 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         }
 
         delete unifiedIds[oldUnifiedId];
-        emit UnifiedIdUpdated(newUnifiedId, oldUnifiedId);
+        emit MotherContractEvents.UnifiedIdUpdated(newUnifiedId, oldUnifiedId, unifiedIds[newUnifiedId].masterAddress, block.timestamp);
     }
 
     function updateMasterAddress(
         string calldata unifiedId,
         address newMasterAddress,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
 
         address currentMasterAddress = unifiedIds[unifiedId].masterAddress;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyUpdateMasterSignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newMasterAddress,
-            currentMasterAddress,
-            sigData
-        )) revert E23();
+        bytes memory data = abi.encode(unifiedId, newMasterAddress);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), currentMasterAddress, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
 
-        emit MasterAddressUpdated(unifiedId, newMasterAddress);
+        emit MotherContractEvents.MasterAddressUpdated(unifiedId, currentMasterAddress, newMasterAddress, block.timestamp);
     }
 
     // === VIEW FUNCTIONS ===
@@ -595,7 +495,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         uint256 chainId
     ) external view returns (address primary, address[] memory secondaries) {
-        ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
+        MotherContractHelpers.ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
         return (chainData.primary, chainData.secondaries);
     }
 
@@ -714,29 +614,29 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function setMaxSecondaryAddressesPerChain(uint256 _maxSecondaryAddresses) external onlyRole(ADMIN_ROLE) {
         uint256 oldMax = config.maxSecondaryAddressesPerChain;
         config.maxSecondaryAddressesPerChain = uint128(_maxSecondaryAddresses);
-        emit MaxSecondaryAddressesPerChainUpdated(oldMax, _maxSecondaryAddresses);
+        emit MotherContractEvents.MaxSecondaryAddressesPerChainUpdated(oldMax, _maxSecondaryAddresses, msg.sender, block.timestamp);
     }
 
     function setMaxChainsPerUnifiedId(uint256 _maxChains) external onlyRole(ADMIN_ROLE) {
         if (_maxChains == 0) revert E24();
         uint256 oldMax = config.maxChainsPerUnifiedId;
         config.maxChainsPerUnifiedId = uint128(_maxChains);
-        emit MaxChainsPerUnifiedIdUpdated(oldMax, _maxChains);
+        emit MotherContractEvents.MaxChainsPerUnifiedIdUpdated(oldMax, _maxChains, msg.sender, block.timestamp);
     }
 
     function setEmergencyMode(bool _enabled) external onlyRole(EMERGENCY_ROLE) {
         config.emergencyMode = _enabled;
-        emit EmergencyModeToggled(_enabled);
+        emit MotherContractEvents.EmergencyModeToggled(_enabled, msg.sender, block.timestamp);
     }
 
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
         isUnavailableUnifiedId[_unifiedId] = true;
-        emit EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender);
+        emit MotherContractEvents.EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender, block.timestamp);
     }
 
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
         isUnavailableUnifiedId[_unifiedId] = false;
-        emit EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender);
+        emit MotherContractEvents.EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender, block.timestamp);
     }
 
     function emergencyCleanupChainData(string calldata _unifiedId, uint256 _chainId) external onlyRole(EMERGENCY_ROLE) {
@@ -759,7 +659,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             unchecked { ++i; }
         }
 
-        emit EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender);
+        emit MotherContractEvents.EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender, block.timestamp);
     }
 
     function getConfiguration() external view returns (
@@ -788,7 +688,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         require(amount <= address(this).balance, "Insufficient contract balance");
 
         // Emit event before external call (CEI pattern)
-        emit EthWithdrawn(to, amount);
+        emit MotherContractEvents.EthWithdrawn(to, amount, msg.sender, block.timestamp);
 
         // Transfer with limited gas to prevent griefing
         (bool success, ) = to.call{value: amount, gas: 50000}("");
@@ -824,7 +724,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         uint256 actualTransferred = balanceBefore - balanceAfter;
 
         // Emit event with actual transferred amount
-        emit ERC20Withdrawn(token, to, actualTransferred);
+        emit MotherContractEvents.ERC20Withdrawn(token, to, actualTransferred, msg.sender, block.timestamp);
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
@@ -835,7 +735,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
      */
     function grantRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(RELAYER_ROLE, relayer);
-        emit RelayerAuthorizationUpdated(relayer, true);
+        emit MotherContractEvents.RelayerAuthorizationUpdated(relayer, true, msg.sender, block.timestamp);
     }
 
     /**
@@ -844,7 +744,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
      */
     function revokeRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(RELAYER_ROLE, relayer);
-        emit RelayerAuthorizationUpdated(relayer, false);
+        emit MotherContractEvents.RelayerAuthorizationUpdated(relayer, false, msg.sender, block.timestamp);
     }
 
     /**
