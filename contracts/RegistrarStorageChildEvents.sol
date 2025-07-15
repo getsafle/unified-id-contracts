@@ -72,7 +72,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     
     /**
      * @notice Emitted when UnifiedID registration is initiated
-     * @dev Optimized for Graph indexer - indexed parameters for filtering, structured data for easy decoding
      * @param unifiedId The UnifiedID to register (indexed for filtering)
      * @param primaryAddress The primary address for the UnifiedID (indexed for filtering)
      * @param registrar The registrar who initiated the registration (indexed for filtering)
@@ -93,7 +92,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     /**
      * @notice Emitted when UnifiedID update is initiated
-     * @dev Optimized for Graph indexer
      * @param oldUnifiedId The current UnifiedID (indexed)
      * @param newUnifiedId The new UnifiedID (indexed)
      * @param registrar The registrar who initiated the update (indexed)
@@ -112,7 +110,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     /**
      * @notice Emitted when primary address change is initiated
-     * @dev Optimized for Graph indexer
      * @param unifiedId The UnifiedID (indexed)
      * @param newPrimaryAddress The new primary address (indexed)
      * @param registrar The registrar who initiated the change (indexed)
@@ -133,7 +130,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     /**
      * @notice Emitted when secondary address addition is initiated
-     * @dev Optimized for Graph indexer
      * @param unifiedId The UnifiedID (indexed)
      * @param secondaryAddress The secondary address to add (indexed)
      * @param registrar The registrar who initiated the addition (indexed)
@@ -154,7 +150,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     /**
      * @notice Emitted when secondary address removal is initiated
-     * @dev Optimized for Graph indexer
      * @param unifiedId The UnifiedID (indexed)
      * @param secondaryAddress The secondary address to remove (indexed)
      * @param registrar The registrar who initiated the removal (indexed)
@@ -497,7 +492,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes32 id = _toBytes32(_unifiedId);
         if (usedNonces[id][_nonce]) revert E24();
 
-        // Simple signature verification - encode data with nonce
         bytes memory messageWithNonce = abi.encodePacked(abi.encode(_unifiedId, _primaryAddress), _nonce);
 
         if (!util.verifySignature(messageWithNonce, _primaryAddress, _primarySignature)) revert E25();
@@ -543,7 +537,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (usedNonces[oldId][_nonce]) revert E24();
 
-        // Simple signature verification - encode data with nonce
         if (!util.verifySignature(abi.encodePacked(abi.encode(_oldUnifiedId, _newUnifiedId), _nonce), currentPrimary, _signature)) revert E30();
 
         usedNonces[oldId][_nonce] = true;
@@ -595,7 +588,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (_newPrimaryAddress == address(0)) revert E48();
         if (usedNonces[id][_nonce]) revert E24();
 
-        // Simple signature verification - encode data with nonce
         if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _newPrimaryAddress), _nonce), oldPrimary, _currentPrimarySignature)) revert E32();
         if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _newPrimaryAddress), _nonce), _newPrimaryAddress, _newPrimarySignature)) revert E33();
 
@@ -631,7 +623,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (userData.isSecondary[_secondaryAddress]) revert E35();
         if (usedNonces[id][_nonce]) revert E24();
 
-        // Simple signature verification - encode data with nonce
         if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), userData.primary, _primarySignature)) revert E25();
         if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), _secondaryAddress, _secondarySignature)) revert E37();
 
@@ -662,7 +653,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (usedNonces[id][_nonce]) revert E24();
 
-        // Simple signature verification - encode data with nonce
         if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), userData.primary, _signature)) revert E30();
 
         usedNonces[id][_nonce] = true;

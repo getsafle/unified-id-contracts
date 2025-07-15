@@ -233,7 +233,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         if (chainData.exists) revert E15();
         if (uid.registeredChainIds.length >= config.maxChainsPerUnifiedId) revert E16();
 
-        // Verify primary signature using simple verification
         bytes memory primaryData = abi.encode(unifiedId, primary);
         if (!util.verifySignature(abi.encodePacked(primaryData, nonces[unifiedId]), primary, primarySignature)) revert E23();
 
@@ -279,7 +278,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // EDGE CASE PROTECTION: Prevent setting zero address as primary
         if (newPrimary == address(0)) revert E33();
 
-        // Verify both signatures using simple verification
         bytes memory data = abi.encode(unifiedId, newPrimary);
         uint256 currentNonce = nonces[unifiedId];
         
@@ -319,7 +317,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             if (chainData.secondaries[i] == secondary) revert E18();
         }
 
-        // Verify signatures using simple verification
         bytes memory data = abi.encode(unifiedId, secondary);
         uint256 currentNonce = nonces[unifiedId];
         
@@ -348,7 +345,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address primary = unifiedIds[unifiedId].chains[chainId].primary;
 
-        // Verify signature using simple verification
         bytes memory data = abi.encode(unifiedId, secondary);
         uint256 currentNonce = nonces[unifiedId];
         
@@ -390,7 +386,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
 
-        // Verify signature using simple verification
         bytes memory data = abi.encode(oldUnifiedId, newUnifiedId);
         uint256 currentNonce = nonces[oldUnifiedId];
         
@@ -478,7 +473,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address currentMasterAddress = unifiedIds[unifiedId].masterAddress;
 
-        // Verify signature using simple verification
         bytes memory data = abi.encode(unifiedId, newMasterAddress);
         uint256 currentNonce = nonces[unifiedId];
         
