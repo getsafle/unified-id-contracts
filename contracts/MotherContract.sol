@@ -104,27 +104,291 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     PackedConfig public config;
 
-    // === EVENTS ===
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event MaxSecondaryAddressesPerChainUpdated(uint256 oldMax, uint256 newMax);
-    event MaxChainsPerUnifiedIdUpdated(uint256 oldMax, uint256 newMax);
-    event EmergencyModeToggled(bool enabled);
-    event ResolverUpdated(address indexed oldResolver, address indexed newResolver, address indexed updatedBy);
-    event ContractPaused(address indexed pausedBy, uint256 timestamp);
-    event ContractUnpaused(address indexed unpausedBy, uint256 timestamp);
-    event RelayerAuthorizationUpdated(address indexed relayer, bool authorized);
-    event UpgradeAuthorized(address indexed newImplementation, address indexed authorizedBy, uint256 timestamp);
-    event EmergencyUnifiedIdMarked(string indexed unifiedId, bool available, address indexed updatedBy);
-    event EmergencyChainDataCleared(string indexed unifiedId, uint256 indexed chainId, address indexed clearedBy);
-    event UnifiedIdRegistered(string indexed unifiedId, address indexed masterAddress, uint256 indexed chainId, address primary);
-    event UnifiedIdUpdated(string indexed newUnifiedId, string indexed oldUnifiedId);
-    event MasterAddressUpdated(string indexed unifiedId, address indexed newMasterAddress);
-    event PrimaryAddressUpdated(string indexed unifiedId, uint256 indexed chainId, address indexed newPrimary);
-    event SecondaryAddressAdded(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
-    event SecondaryAddressRemoved(string indexed unifiedId, uint256 indexed chainId, address indexed secondary);
-    event EthWithdrawn(address indexed to, uint256 amount);
-    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
+    // === INDEXER-OPTIMIZED EVENTS ===
+    
+    // === CORE OPERATION EVENTS ===
+    
+    /**
+     * @notice Emitted when a UnifiedID is successfully registered
+     * @dev Optimized for Graph indexer with indexed parameters for efficient filtering
+     * @param unifiedId The UnifiedID that was registered (indexed)
+     * @param masterAddress The master address for the UnifiedID (indexed)
+     * @param chainId The chain ID where registration occurred (indexed)
+     * @param primary The primary address for this chain
+     * @param timestamp Block timestamp
+     */
+    event UnifiedIdRegistered(
+        string indexed unifiedId,
+        address indexed masterAddress,
+        uint256 indexed chainId,
+        address primary,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when a UnifiedID is successfully updated
+     * @dev Optimized for Graph indexer
+     * @param oldUnifiedId The old UnifiedID (indexed)
+     * @param newUnifiedId The new UnifiedID (indexed)
+     * @param masterAddress The master address (indexed)
+     * @param timestamp Block timestamp
+     */
+    event UnifiedIdUpdated(
+        string indexed oldUnifiedId,
+        string indexed newUnifiedId,
+        address indexed masterAddress,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when master address is updated
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param oldMasterAddress The old master address (indexed)
+     * @param newMasterAddress The new master address (indexed)
+     * @param timestamp Block timestamp
+     */
+    event MasterAddressUpdated(
+        string indexed unifiedId,
+        address indexed oldMasterAddress,
+        address indexed newMasterAddress,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when primary address is updated for a specific chain
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param chainId The chain ID (indexed)
+     * @param oldPrimary The old primary address (indexed)
+     * @param newPrimary The new primary address
+     * @param timestamp Block timestamp
+     */
+    event PrimaryAddressUpdated(
+        string indexed unifiedId,
+        uint256 indexed chainId,
+        address indexed oldPrimary,
+        address newPrimary,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when a secondary address is added
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param chainId The chain ID (indexed)
+     * @param secondaryAddress The secondary address added (indexed)
+     * @param timestamp Block timestamp
+     */
+    event SecondaryAddressAdded(
+        string indexed unifiedId,
+        uint256 indexed chainId,
+        address indexed secondaryAddress,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when a secondary address is removed
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param chainId The chain ID (indexed)
+     * @param secondaryAddress The secondary address removed (indexed)
+     * @param timestamp Block timestamp
+     */
+    event SecondaryAddressRemoved(
+        string indexed unifiedId,
+        uint256 indexed chainId,
+        address indexed secondaryAddress,
+        uint256 timestamp
+    );
+
+    // === ADMIN & CONFIGURATION EVENTS ===
+    
+    /**
+     * @notice Emitted when ownership transfer is initiated
+     * @param previousOwner Current owner who initiated the transfer (indexed)
+     * @param newOwner Address that will become the new owner (indexed)
+     * @param timestamp Block timestamp
+     */
+    event OwnershipTransferStarted(
+        address indexed previousOwner,
+        address indexed newOwner,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when ownership transfer is completed
+     * @param previousOwner Previous owner address (indexed)
+     * @param newOwner New owner address (indexed)
+     * @param timestamp Block timestamp
+     */
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when maximum secondary addresses per chain is updated
+     * @param oldMax Previous maximum value
+     * @param newMax New maximum value
+     * @param updatedBy Address that made the update (indexed)
+     * @param timestamp Block timestamp
+     */
+    event MaxSecondaryAddressesPerChainUpdated(
+        uint256 oldMax,
+        uint256 newMax,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when maximum chains per UnifiedID is updated
+     * @param oldMax Previous maximum value
+     * @param newMax New maximum value
+     * @param updatedBy Address that made the update (indexed)
+     * @param timestamp Block timestamp
+     */
+    event MaxChainsPerUnifiedIdUpdated(
+        uint256 oldMax,
+        uint256 newMax,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when emergency mode is toggled
+     * @param enabled Whether emergency mode is enabled
+     * @param updatedBy Address that made the change (indexed)
+     * @param timestamp Block timestamp
+     */
+    event EmergencyModeToggled(
+        bool enabled,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when resolver contract is updated
+     * @param oldResolver Previous resolver address (indexed)
+     * @param newResolver New resolver address (indexed)
+     * @param updatedBy Address that made the update (indexed)
+     * @param timestamp Block timestamp
+     */
+    event ResolverUpdated(
+        address indexed oldResolver,
+        address indexed newResolver,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when contract is paused
+     * @param pausedBy Address that paused the contract (indexed)
+     * @param timestamp Block timestamp
+     */
+    event ContractPaused(
+        address indexed pausedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when contract is unpaused
+     * @param unpausedBy Address that unpaused the contract (indexed)
+     * @param timestamp Block timestamp
+     */
+    event ContractUnpaused(
+        address indexed unpausedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when relayer authorization is updated
+     * @param relayer The relayer address (indexed)
+     * @param authorized Whether the relayer is authorized
+     * @param updatedBy Address that made the change (indexed)
+     * @param timestamp Block timestamp
+     */
+    event RelayerAuthorizationUpdated(
+        address indexed relayer,
+        bool authorized,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when contract upgrade is authorized
+     * @param newImplementation New implementation address (indexed)
+     * @param authorizedBy Address that authorized the upgrade (indexed)
+     * @param timestamp Block timestamp
+     */
+    event UpgradeAuthorized(
+        address indexed newImplementation,
+        address indexed authorizedBy,
+        uint256 timestamp
+    );
+
+    // === EMERGENCY EVENTS ===
+    
+    /**
+     * @notice Emitted when a UnifiedID is marked as unavailable/available in emergency
+     * @param unifiedId The UnifiedID (indexed)
+     * @param available Whether the UnifiedID is available
+     * @param updatedBy Address that made the change (indexed)
+     * @param timestamp Block timestamp
+     */
+    event EmergencyUnifiedIdMarked(
+        string indexed unifiedId,
+        bool available,
+        address indexed updatedBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when chain data is cleared in emergency
+     * @param unifiedId The UnifiedID (indexed)
+     * @param chainId The chain ID (indexed)
+     * @param clearedBy Address that cleared the data (indexed)
+     * @param timestamp Block timestamp
+     */
+    event EmergencyChainDataCleared(
+        string indexed unifiedId,
+        uint256 indexed chainId,
+        address indexed clearedBy,
+        uint256 timestamp
+    );
+
+    // === WITHDRAWAL EVENTS ===
+    
+    /**
+     * @notice Emitted when ETH is withdrawn from the contract
+     * @param to Recipient address (indexed)
+     * @param amount Amount withdrawn
+     * @param withdrawnBy Address that initiated the withdrawal (indexed)
+     * @param timestamp Block timestamp
+     */
+    event EthWithdrawn(
+        address indexed to,
+        uint256 amount,
+        address indexed withdrawnBy,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when ERC20 tokens are withdrawn from the contract
+     * @param token Token contract address (indexed)
+     * @param to Recipient address (indexed)
+     * @param amount Amount withdrawn
+     * @param withdrawnBy Address that initiated the withdrawal (indexed)
+     * @param timestamp Block timestamp
+     */
+    event ERC20Withdrawn(
+        address indexed token,
+        address indexed to,
+        uint256 amount,
+        address indexed withdrawnBy,
+        uint256 timestamp
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -177,7 +441,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function transferOwnership(address newOwner) public virtual onlyOwner {
         if (newOwner == address(0)) revert E2();
         _pendingOwner = newOwner;
-        emit OwnershipTransferStarted(owner(), newOwner);
+        emit OwnershipTransferStarted(owner(), newOwner, block.timestamp);
     }
 
     function acceptOwnership() external {
@@ -190,7 +454,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         delete _pendingOwner;
         address oldOwner = _owner;
         _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
+        emit OwnershipTransferred(oldOwner, newOwner, block.timestamp);
     }
 
     // === INITIALIZATION ===
@@ -211,7 +475,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         // Initialize ownership
         _owner = msg.sender;
-        emit OwnershipTransferred(address(0), msg.sender);
+        emit OwnershipTransferred(address(0), msg.sender, block.timestamp);
 
         resolver = IUnifiedIdResolver(_resolver);
 
@@ -246,7 +510,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
-        emit ResolverUpdated(oldResolver, _resolver, msg.sender);
+        emit ResolverUpdated(oldResolver, _resolver, msg.sender, block.timestamp);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override {
@@ -294,7 +558,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.setUnifiedIdPrimaryAddress(unifiedId, chainId, primary);
 
-        emit UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary);
+        emit UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary, block.timestamp);
     }
 
     function updatePrimaryAddress(
@@ -330,7 +594,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.updateUnifiedIdPrimaryAddress(unifiedId, chainId, newPrimary);
 
-        emit PrimaryAddressUpdated(unifiedId, chainId, newPrimary);
+        emit PrimaryAddressUpdated(unifiedId, chainId, currentPrimary, newPrimary, block.timestamp);
     }
 
     function addSecondaryAddress(
@@ -370,7 +634,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.addUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
-        emit SecondaryAddressAdded(unifiedId, chainId, secondary);
+        emit SecondaryAddressAdded(unifiedId, chainId, secondary, block.timestamp);
     }
 
     function removeSecondaryAddress(
@@ -405,7 +669,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
                 // Update resolver
                 resolver.removeUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
-                emit SecondaryAddressRemoved(unifiedId, chainId, secondary);
+                emit SecondaryAddressRemoved(unifiedId, chainId, secondary, block.timestamp);
                 break;
             }
         }
@@ -502,7 +766,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         }
 
         delete unifiedIds[oldUnifiedId];
-        emit UnifiedIdUpdated(newUnifiedId, oldUnifiedId);
+        emit UnifiedIdUpdated(newUnifiedId, oldUnifiedId, unifiedIds[newUnifiedId].masterAddress, block.timestamp);
     }
 
     function updateMasterAddress(
@@ -525,7 +789,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
 
-        emit MasterAddressUpdated(unifiedId, newMasterAddress);
+        emit MasterAddressUpdated(unifiedId, currentMasterAddress, newMasterAddress, block.timestamp);
     }
 
     // === VIEW FUNCTIONS ===
@@ -656,29 +920,29 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function setMaxSecondaryAddressesPerChain(uint256 _maxSecondaryAddresses) external onlyRole(ADMIN_ROLE) {
         uint256 oldMax = config.maxSecondaryAddressesPerChain;
         config.maxSecondaryAddressesPerChain = uint128(_maxSecondaryAddresses);
-        emit MaxSecondaryAddressesPerChainUpdated(oldMax, _maxSecondaryAddresses);
+        emit MaxSecondaryAddressesPerChainUpdated(oldMax, _maxSecondaryAddresses, msg.sender, block.timestamp);
     }
 
     function setMaxChainsPerUnifiedId(uint256 _maxChains) external onlyRole(ADMIN_ROLE) {
         if (_maxChains == 0) revert E24();
         uint256 oldMax = config.maxChainsPerUnifiedId;
         config.maxChainsPerUnifiedId = uint128(_maxChains);
-        emit MaxChainsPerUnifiedIdUpdated(oldMax, _maxChains);
+        emit MaxChainsPerUnifiedIdUpdated(oldMax, _maxChains, msg.sender, block.timestamp);
     }
 
     function setEmergencyMode(bool _enabled) external onlyRole(EMERGENCY_ROLE) {
         config.emergencyMode = _enabled;
-        emit EmergencyModeToggled(_enabled);
+        emit EmergencyModeToggled(_enabled, msg.sender, block.timestamp);
     }
 
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
         isUnavailableUnifiedId[_unifiedId] = true;
-        emit EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender);
+        emit EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender, block.timestamp);
     }
 
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
         isUnavailableUnifiedId[_unifiedId] = false;
-        emit EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender);
+        emit EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender, block.timestamp);
     }
 
     function emergencyCleanupChainData(string calldata _unifiedId, uint256 _chainId) external onlyRole(EMERGENCY_ROLE) {
@@ -701,7 +965,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             unchecked { ++i; }
         }
 
-        emit EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender);
+        emit EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender, block.timestamp);
     }
 
     function getConfiguration() external view returns (
@@ -730,7 +994,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         require(amount <= address(this).balance, "Insufficient contract balance");
 
         // Emit event before external call (CEI pattern)
-        emit EthWithdrawn(to, amount);
+        emit EthWithdrawn(to, amount, msg.sender, block.timestamp);
 
         // Transfer with limited gas to prevent griefing
         (bool success, ) = to.call{value: amount, gas: 50000}("");
@@ -766,7 +1030,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         uint256 actualTransferred = balanceBefore - balanceAfter;
 
         // Emit event with actual transferred amount
-        emit ERC20Withdrawn(token, to, actualTransferred);
+        emit ERC20Withdrawn(token, to, actualTransferred, msg.sender, block.timestamp);
     }
 
     // ==================== ROLE MANAGEMENT FUNCTIONS ====================
@@ -777,7 +1041,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
      */
     function grantRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(RELAYER_ROLE, relayer);
-        emit RelayerAuthorizationUpdated(relayer, true);
+        emit RelayerAuthorizationUpdated(relayer, true, msg.sender, block.timestamp);
     }
 
     /**
@@ -786,7 +1050,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
      */
     function revokeRelayerRole(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(RELAYER_ROLE, relayer);
-        emit RelayerAuthorizationUpdated(relayer, false);
+        emit RelayerAuthorizationUpdated(relayer, false, msg.sender, block.timestamp);
     }
 
     /**
