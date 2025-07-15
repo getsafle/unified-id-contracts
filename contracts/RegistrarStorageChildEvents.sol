@@ -314,17 +314,17 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     }
 
     function completeRegisterUnifiedId(string calldata _unifiedId, address _primaryAddress, bytes calldata _masterSignature, bytes calldata _primarySignature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-
         bytes32 id = _toBytes32(_unifiedId);
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("REGISTER_UNIFIED_ID", _unifiedId, _primaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _primaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, _primaryAddress, _primarySignature)) revert E25();
+        if (!util.verifySignature(messageWithNonce, _primaryAddress, _primarySignature)) revert E25();
 
         if (_masterSignature.length != 0) {
-            if (!util.verifySignature(message, _primaryAddress, _masterSignature)) revert E26();
+            if (!util.verifySignature(messageWithNonce, _primaryAddress, _masterSignature)) revert E26();
         }
 
         usedNonces[id][_nonce] = true;
@@ -362,12 +362,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         UserData storage userData = userAddresses[oldId];
         address currentPrimary = userData.primary;
 
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[oldId][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("UPDATE_UNIFIED_ID", _oldUnifiedId, _newUnifiedId, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_oldUnifiedId, _newUnifiedId);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, currentPrimary, _signature)) revert E30();
+        if (!util.verifySignature(messageWithNonce, currentPrimary, _signature)) revert E30();
 
         usedNonces[oldId][_nonce] = true;
 
@@ -418,13 +419,14 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (oldPrimary == _newPrimaryAddress) revert E47();
         if (_newPrimaryAddress == address(0)) revert E48();
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("UPDATE_PRIMARY_ADDRESS", _unifiedId, _newPrimaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _newPrimaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, oldPrimary, _currentPrimarySignature)) revert E32();
-        if (!util.verifySignature(message, _newPrimaryAddress, _newPrimarySignature)) revert E33();
+        if (!util.verifySignature(messageWithNonce, oldPrimary, _currentPrimarySignature)) revert E32();
+        if (!util.verifySignature(messageWithNonce, _newPrimaryAddress, _newPrimarySignature)) revert E33();
 
         usedNonces[id][_nonce] = true;
         userData.primary = _newPrimaryAddress;
@@ -456,13 +458,14 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (userData.primary == _secondaryAddress) revert E34();
         if (userData.isSecondary[_secondaryAddress]) revert E35();
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("ADD_SECONDARY_ADDRESS", _unifiedId, _secondaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _secondaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, userData.primary, _primarySignature)) revert E25();
-        if (!util.verifySignature(message, _secondaryAddress, _secondarySignature)) revert E37();
+        if (!util.verifySignature(messageWithNonce, userData.primary, _primarySignature)) revert E25();
+        if (!util.verifySignature(messageWithNonce, _secondaryAddress, _secondarySignature)) revert E37();
 
         usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = true;
@@ -489,12 +492,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
 
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("REMOVE_SECONDARY_ADDRESS", _unifiedId, _secondaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _secondaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, userData.primary, _signature)) revert E30();
+        if (!util.verifySignature(messageWithNonce, userData.primary, _signature)) revert E30();
 
         usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = false;

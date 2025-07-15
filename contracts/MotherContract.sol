@@ -3,7 +3,6 @@ pragma solidity =0.8.25;
 
 import "./RegistrarStorageUtil.sol";
 import "./IUnifiedIdResolver.sol";
-import "./SignatureVerifier.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -19,7 +18,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
  * @dev Optimized version with enum errors and gas optimizations
  */
 contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable {
-    using SignatureVerifier for bytes32;
     using SafeERC20 for IERC20;
 
     // === ERROR ENUMS FOR GAS OPTIMIZATION ===
@@ -106,17 +104,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     PackedConfig public config;
 
-    // EIP-712 constants
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-    );
-
-    bytes32 public constant REGISTER_TYPEHASH = keccak256(
-        "RegisterUnifiedId(string unifiedId,address primary,uint256 chainId,uint256 nonce)"
-    );
-
-    bytes32 public DOMAIN_SEPARATOR;
-
     // === EVENTS ===
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -162,6 +149,15 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     modifier onlyRelayer() {
         require(hasRole(RELAYER_ROLE, msg.sender), "AccessControl: caller is not relayer");
+        _;
+    }
+
+    // === SIMPLE SIGNATURE VERIFICATION MODIFIER ===
+    modifier verifySignature(bytes memory data, address expectedSigner, bytes memory signature) {
+        (string memory unifiedId, ) = abi.decode(data, (string, address));
+        uint256 nonce = nonces[unifiedId];
+        bytes memory dataWithNonce = abi.encodePacked(data, nonce);
+        require(util.verifySignature(dataWithNonce, expectedSigner, signature), "Invalid signature");
         _;
     }
 
@@ -213,16 +209,6 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         require(util.isContract(_util), "Util address is not a contract");
         require(util.isContract(_resolver), "Resolver address is not a contract");
 
-        // Initialize EIP-712 domain separator with proxy address
-        DOMAIN_SEPARATOR = SignatureVerifier.createDomainSeparator(
-            SignatureVerifier.DomainData({
-                name: "UnifiedID",
-                version: "1",
-                chainId: block.chainid,
-                verifyingContract: address(this)
-            })
-        );
-
         // Initialize ownership
         _owner = msg.sender;
         emit OwnershipTransferred(address(0), msg.sender);
@@ -272,8 +258,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         uint256 chainId,
         address primary,
-        SignatureVerifier.SignatureData calldata masterSigData,
-        SignatureVerifier.SignatureData calldata primarySigData
+        bytes calldata masterSignature,
+        bytes calldata primarySignature
     ) external onlyRelayer whenNotPaused notInEmergencyMode {
         if (isUnavailableUnifiedId[unifiedId]) revert E7();
 
@@ -283,17 +269,11 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         if (chainData.exists) revert E15();
         if (uid.registeredChainIds.length >= config.maxChainsPerUnifiedId) revert E16();
 
-        // Verify primary signature
-        if (!SignatureVerifier.verifyRegisterSignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            primary,
-            primary,
-            primarySigData
-        )) revert E23();
+        // Verify primary signature using simple verification
+        bytes memory primaryData = abi.encode(unifiedId, primary);
+        if (!util.verifySignature(abi.encodePacked(primaryData, nonces[unifiedId]), primary, primarySignature)) revert E23();
 
         // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         if (!uid.exists) {
@@ -302,13 +282,9 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             uid.exists = true;
         } else {
             // Existing UnifiedID - verify master signature
-            if (!SignatureVerifier.verifyRegisterSignature(
-                DOMAIN_SEPARATOR,
-                unifiedId,
-                primary,
-                uid.masterAddress,
-                masterSigData
-            )) revert E23();
+            if (masterSignature.length > 0) {
+                if (!util.verifySignature(abi.encodePacked(primaryData, nonces[unifiedId] - 1), uid.masterAddress, masterSignature)) revert E23();
+            }
         }
 
         chainData.primary = primary;
@@ -325,8 +301,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         uint256 chainId,
         address newPrimary,
-        SignatureVerifier.SignatureData calldata currentSigData,
-        SignatureVerifier.SignatureData calldata newSigData
+        bytes calldata currentSignature,
+        bytes calldata newSignature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
@@ -339,25 +315,14 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // EDGE CASE PROTECTION: Prevent setting zero address as primary
         if (newPrimary == address(0)) revert E33();
 
-        // Verify both signatures
-        if (!SignatureVerifier.verifyUpdatePrimarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newPrimary,
-            currentPrimary,
-            currentSigData
-        )) revert E23();
-
-        if (!SignatureVerifier.verifyUpdatePrimarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newPrimary,
-            newPrimary,
-            newSigData
-        )) revert E23();
+        // Verify both signatures using simple verification
+        bytes memory data = abi.encode(unifiedId, newPrimary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), currentPrimary, currentSignature)) revert E23();
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), newPrimary, newSignature)) revert E23();
 
         // Update nonce
-        if (currentSigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         unifiedIds[unifiedId].chains[chainId].primary = newPrimary;
@@ -372,8 +337,8 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         uint256 chainId,
         address secondary,
-        SignatureVerifier.SignatureData calldata primarySigData,
-        SignatureVerifier.SignatureData calldata secondarySigData
+        bytes calldata primarySignature,
+        bytes calldata secondarySignature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
@@ -390,25 +355,14 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             if (chainData.secondaries[i] == secondary) revert E18();
         }
 
-        // Verify signatures
-        if (!SignatureVerifier.verifyAddSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            primary,
-            primarySigData
-        )) revert E23();
-
-        if (!SignatureVerifier.verifyAddSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            secondary,
-            secondarySigData
-        )) revert E23();
+        // Verify signatures using simple verification
+        bytes memory data = abi.encode(unifiedId, secondary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), primary, primarySignature)) revert E23();
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), secondary, secondarySignature)) revert E23();
 
         // Update nonce
-        if (primarySigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         chainData.secondaries.push(secondary);
@@ -423,24 +377,20 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         string calldata unifiedId,
         uint256 chainId,
         address secondary,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
         if (!unifiedIds[unifiedId].chains[chainId].exists) revert E14();
 
         address primary = unifiedIds[unifiedId].chains[chainId].primary;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyRemoveSecondarySignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            secondary,
-            primary,
-            sigData
-        )) revert E23();
+        // Verify signature using simple verification
+        bytes memory data = abi.encode(unifiedId, secondary);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), primary, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         ChainData storage chainData = unifiedIds[unifiedId].chains[chainId];
@@ -464,7 +414,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function updateUnifiedId(
         string calldata oldUnifiedId,
         string calldata newUnifiedId,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (isUnavailableUnifiedId[oldUnifiedId]) revert E7();
         if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
@@ -476,17 +426,13 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyUpdateUnifiedIdSignature(
-            DOMAIN_SEPARATOR,
-            oldUnifiedId,
-            newUnifiedId,
-            masterAddress,
-            sigData
-        )) revert E23();
+        // Verify signature using simple verification
+        bytes memory data = abi.encode(oldUnifiedId, newUnifiedId);
+        uint256 currentNonce = nonces[oldUnifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), masterAddress, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[oldUnifiedId]) revert E23();
         nonces[newUnifiedId] = nonces[oldUnifiedId] + 1;
         delete nonces[oldUnifiedId];
 
@@ -562,23 +508,19 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     function updateMasterAddress(
         string calldata unifiedId,
         address newMasterAddress,
-        SignatureVerifier.SignatureData calldata sigData
+        bytes calldata signature
     ) external onlyRelayer whenNotPaused {
         if (!unifiedIds[unifiedId].exists) revert E4();
 
         address currentMasterAddress = unifiedIds[unifiedId].masterAddress;
 
-        // Verify signature
-        if (!SignatureVerifier.verifyUpdateMasterSignature(
-            DOMAIN_SEPARATOR,
-            unifiedId,
-            newMasterAddress,
-            currentMasterAddress,
-            sigData
-        )) revert E23();
+        // Verify signature using simple verification
+        bytes memory data = abi.encode(unifiedId, newMasterAddress);
+        uint256 currentNonce = nonces[unifiedId];
+        
+        if (!util.verifySignature(abi.encodePacked(data, currentNonce), currentMasterAddress, signature)) revert E23();
 
         // Update nonce
-        if (sigData.nonce != nonces[unifiedId]) revert E23();
         nonces[unifiedId]++;
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
