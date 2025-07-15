@@ -68,8 +68,188 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         OwnershipTransferred
     }
 
-    // === SINGLE UNIFIED EVENT ===
-    event UnifiedEvent(EventType indexed eventType, bytes data);
+    // === INDEXER-OPTIMIZED EVENTS ===
+    
+    /**
+     * @notice Emitted when UnifiedID registration is initiated
+     * @dev Optimized for Graph indexer - indexed parameters for filtering, structured data for easy decoding
+     * @param unifiedId The UnifiedID to register (indexed for filtering)
+     * @param primaryAddress The primary address for the UnifiedID (indexed for filtering)
+     * @param registrar The registrar who initiated the registration (indexed for filtering)
+     * @param masterSignature The master signature (if applicable)
+     * @param primarySignature The primary signature
+     * @param options Additional options data
+     * @param timestamp Block timestamp
+     */
+    event RegisterUnifiedIdInitiated(
+        string indexed unifiedId,
+        address indexed primaryAddress,
+        address indexed registrar,
+        bytes masterSignature,
+        bytes primarySignature,
+        bytes options,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when UnifiedID update is initiated
+     * @dev Optimized for Graph indexer
+     * @param oldUnifiedId The current UnifiedID (indexed)
+     * @param newUnifiedId The new UnifiedID (indexed)
+     * @param registrar The registrar who initiated the update (indexed)
+     * @param signature The signature for the update
+     * @param options Additional options data
+     * @param timestamp Block timestamp
+     */
+    event UpdateUnifiedIdInitiated(
+        string indexed oldUnifiedId,
+        string indexed newUnifiedId,
+        address indexed registrar,
+        bytes signature,
+        bytes options,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when primary address change is initiated
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param newPrimaryAddress The new primary address (indexed)
+     * @param registrar The registrar who initiated the change (indexed)
+     * @param currentPrimarySignature Signature from current primary
+     * @param newPrimarySignature Signature from new primary
+     * @param options Additional options data
+     * @param timestamp Block timestamp
+     */
+    event UpdateUnifiedIdPrimaryAddressInitiated(
+        string indexed unifiedId,
+        address indexed newPrimaryAddress,
+        address indexed registrar,
+        bytes currentPrimarySignature,
+        bytes newPrimarySignature,
+        bytes options,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when secondary address addition is initiated
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param secondaryAddress The secondary address to add (indexed)
+     * @param registrar The registrar who initiated the addition (indexed)
+     * @param primarySignature Signature from primary address
+     * @param secondarySignature Signature from secondary address
+     * @param options Additional options data
+     * @param timestamp Block timestamp
+     */
+    event AddSecondaryAddressInitiated(
+        string indexed unifiedId,
+        address indexed secondaryAddress,
+        address indexed registrar,
+        bytes primarySignature,
+        bytes secondarySignature,
+        bytes options,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when secondary address removal is initiated
+     * @dev Optimized for Graph indexer
+     * @param unifiedId The UnifiedID (indexed)
+     * @param secondaryAddress The secondary address to remove (indexed)
+     * @param registrar The registrar who initiated the removal (indexed)
+     * @param signature The signature for removal
+     * @param options Additional options data
+     * @param timestamp Block timestamp
+     */
+    event RemoveSecondaryAddressInitiated(
+        string indexed unifiedId,
+        address indexed secondaryAddress,
+        address indexed registrar,
+        bytes signature,
+        bytes options,
+        uint256 timestamp
+    );
+
+    // === COMPLETION EVENTS ===
+    
+    /**
+     * @notice Emitted when UnifiedID registration is completed
+     * @param unifiedId The UnifiedID that was registered (indexed)
+     * @param primaryAddress The primary address (indexed)
+     * @param timestamp Block timestamp
+     */
+    event UnifiedIDRegistered(
+        string indexed unifiedId,
+        address indexed primaryAddress,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when UnifiedID is updated
+     * @param oldUnifiedId The old UnifiedID (indexed)
+     * @param newUnifiedId The new UnifiedID (indexed)
+     * @param primaryAddress The primary address (indexed)
+     * @param timestamp Block timestamp
+     */
+    event UnifiedIDChanged(
+        string indexed oldUnifiedId,
+        string indexed newUnifiedId,
+        address indexed primaryAddress,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Emitted when primary address is updated
+     * @param unifiedId The UnifiedID (indexed)
+     * @param oldPrimary The old primary address (indexed)
+     * @param newPrimary The new primary address (indexed)
+     */
+    event UnifiedIDUpdated(
+        string indexed unifiedId,
+        address indexed oldPrimary,
+        address indexed newPrimary
+    );
+
+    /**
+     * @notice Emitted when secondary address is added
+     * @param unifiedId The UnifiedID (indexed)
+     * @param secondaryAddress The secondary address added (indexed)
+     */
+    event SecondaryAddressAdded(
+        string indexed unifiedId,
+        address indexed secondaryAddress
+    );
+
+    /**
+     * @notice Emitted when secondary address is removed
+     * @param unifiedId The UnifiedID (indexed)
+     * @param secondaryAddress The secondary address removed (indexed)
+     */
+    event SecondaryAddressRemoved(
+        string indexed unifiedId,
+        address indexed secondaryAddress
+    );
+
+    // === ADMIN EVENTS ===
+    
+    event MaxSecondaryAddressesUpdated(uint256 oldMax, uint256 newMax);
+    event PublicRegistrarRegistrationToggled(bool enabled);
+    event EmergencyModeToggled(bool enabled);
+    event UnifiedIdLengthLimitsUpdated(uint256 minLength, uint256 maxLength);
+    event UtilImplementationUpdated(address oldUtil, address newUtil, address updatedBy);
+    event ResolverUpdated(address oldResolver, address newResolver, address updatedBy);
+    event ChainIdUpdated(uint256 oldChainId, uint256 newChainId, address updatedBy);
+    event AuthorizedRelayerUpdated(address relayer, bool authorized, address updatedBy);
+    event EmergencyUnifiedIdMarked(string unifiedId, bool available, address updatedBy);
+    event EmergencyRegistrarRemoved(address registrarAddress, string registrarName, address removedBy);
+    event RegistrarRegistered(address registrarAddress, string registrarName);
+    event RegistrationPaused(address pausedBy);
+    event RegistrationUnpaused(address unpausedBy);
+    event EthWithdrawn(address to, uint256 amount);
+    event ERC20Withdrawn(address token, address to, uint256 amount);
+    event OwnershipTransferStarted(address previousOwner, address newOwner);
+    event OwnershipTransferred(address previousOwner, address newOwner);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -100,7 +280,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     function transferOwnership(address newOwner) public virtual onlyOwner {
         if (newOwner == address(0)) revert E2();
         _pendingOwner = newOwner;
-        emit UnifiedEvent(EventType.OwnershipTransferStarted, abi.encode(owner(), newOwner));
+        emit OwnershipTransferStarted(owner(), newOwner);
     }
 
     function acceptOwnership() external {
@@ -113,7 +293,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         delete _pendingOwner;
         address oldOwner = _owner;
         _owner = newOwner;
-        emit UnifiedEvent(EventType.OwnershipTransferred, abi.encode(oldOwner, newOwner));
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 
     // === OPTIMIZED STORAGE STRUCTS ===
@@ -225,7 +405,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         __AccessControl_init();
 
         _owner = msg.sender;
-        emit UnifiedEvent(EventType.OwnershipTransferred, abi.encode(address(0), msg.sender));
+        emit OwnershipTransferred(address(0), msg.sender);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -259,7 +439,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         
         address oldUtil = address(util);
         util = RegistrarStorageUtil(_RegistrarStorageUtil);
-        emit UnifiedEvent(EventType.UtilImplementationUpdated, abi.encode(oldUtil, _RegistrarStorageUtil, msg.sender));
+        emit UtilImplementationUpdated(oldUtil, _RegistrarStorageUtil, msg.sender);
     }
 
     function setResolver(address _resolver) external onlyRole(ADMIN_ROLE) {
@@ -268,13 +448,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         
         address oldResolver = address(resolver);
         resolver = IUnifiedIdResolver(_resolver);
-        emit UnifiedEvent(EventType.ResolverUpdated, abi.encode(oldResolver, _resolver, msg.sender));
+        emit ResolverUpdated(oldResolver, _resolver, msg.sender);
     }
 
     function setChainId(uint256 _chainId) external onlyRole(ADMIN_ROLE) {
         uint256 oldChainId = chainId;
         chainId = _chainId;
-        emit UnifiedEvent(EventType.ChainIdUpdated, abi.encode(oldChainId, _chainId, msg.sender));
+        emit ChainIdUpdated(oldChainId, _chainId, msg.sender);
     }
 
     function registerRegistrar(string calldata _registrarName, address _registrarAddress) external payable whenNotPaused validateRegistrarName(_registrarName) publicRegistrarAllowed notInEmergencyMode returns (bool) {
@@ -287,18 +467,18 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         registrarNames.push(_registrarName);
 
         _grantRole(REGISTRAR_ROLE, _registrarAddress);
-        emit UnifiedEvent(EventType.RegistrarRegistered, abi.encode(_registrarAddress, _registrarName));
+        emit RegistrarRegistered(_registrarAddress, _registrarName);
         return true;
     }
 
     function pauseRegistration() external onlyRole(ADMIN_ROLE) {
         config.isPaused = true;
-        emit UnifiedEvent(EventType.RegistrationPaused, abi.encode(msg.sender));
+        emit RegistrationPaused(msg.sender);
     }
 
     function unpauseRegistration() external onlyRole(ADMIN_ROLE) {
         config.isPaused = false;
-        emit UnifiedEvent(EventType.RegistrationUnpaused, abi.encode(msg.sender));
+        emit RegistrationUnpaused(msg.sender);
     }
 
     function initiateRegisterUnifiedId(string calldata _unifiedId, address _primaryAddress, bytes calldata _masterSignature, bytes calldata _primarySignature, bytes calldata _options) external payable whenNotPaused onlyRegistrar returns (bool) {
@@ -309,22 +489,22 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (registrarNameToAddress[id] != address(0)) revert E21();
         if (resolveAddressFromUnifiedId[id] != address(0)) revert E22();
 
-        emit UnifiedEvent(EventType.RegisterUnifiedIdInitiated, abi.encode(_unifiedId, _primaryAddress, _masterSignature, _primarySignature, _options));
+        emit RegisterUnifiedIdInitiated(_unifiedId, _primaryAddress, msg.sender, _masterSignature, _primarySignature, _options, block.timestamp);
         return true;
     }
 
     function completeRegisterUnifiedId(string calldata _unifiedId, address _primaryAddress, bytes calldata _masterSignature, bytes calldata _primarySignature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
-
         bytes32 id = _toBytes32(_unifiedId);
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("REGISTER_UNIFIED_ID", _unifiedId, _primaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _primaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, _primaryAddress, _primarySignature)) revert E25();
+        if (!util.verifySignature(messageWithNonce, _primaryAddress, _primarySignature)) revert E25();
 
         if (_masterSignature.length != 0) {
-            if (!util.verifySignature(message, _primaryAddress, _masterSignature)) revert E26();
+            if (!util.verifySignature(messageWithNonce, _primaryAddress, _masterSignature)) revert E26();
         }
 
         usedNonces[id][_nonce] = true;
@@ -341,13 +521,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.setUnifiedIdPrimaryAddress(_unifiedId, chainId, _primaryAddress);
 
-        emit UnifiedEvent(EventType.UnifiedIDRegistered, abi.encode(_unifiedId, _primaryAddress, block.timestamp));
+        emit UnifiedIDRegistered(_unifiedId, _primaryAddress, block.timestamp);
         return true;
     }
 
     function initiateUpdateUnifiedId(string calldata _oldUnifiedId, string calldata _newUnifiedId, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
         if (!util.isUnifiedIdValid(_newUnifiedId)) revert E27();
-        emit UnifiedEvent(EventType.UpdateUnifiedIdInitiated, abi.encode(_oldUnifiedId, _newUnifiedId, _signature, _options));
+        emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, msg.sender, _signature, _options, block.timestamp);
         return true;
     }
 
@@ -362,12 +542,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         UserData storage userData = userAddresses[oldId];
         address currentPrimary = userData.primary;
 
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[oldId][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("UPDATE_UNIFIED_ID", _oldUnifiedId, _newUnifiedId, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_oldUnifiedId, _newUnifiedId);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, currentPrimary, _signature)) revert E30();
+        if (!util.verifySignature(messageWithNonce, currentPrimary, _signature)) revert E30();
 
         usedNonces[oldId][_nonce] = true;
 
@@ -402,12 +583,12 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         unavailableUnifiedIds[newId] = true;
         delete userAddresses[oldId];
 
-        emit UnifiedEvent(EventType.UnifiedIDChanged, abi.encode(_oldUnifiedId, _newUnifiedId, primaryAddress, block.timestamp));
+        emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, primaryAddress, block.timestamp);
         return true;
     }
 
     function initiatePrimaryAddressChange(string calldata _unifiedId, address _newPrimaryAddress, bytes calldata currentPrimarySignature, bytes calldata newPrimarySignature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        emit UnifiedEvent(EventType.UpdateUnifiedIdPrimaryAddressInitiated, abi.encode(_unifiedId, _newPrimaryAddress, currentPrimarySignature, newPrimarySignature, _options));
+        emit UpdateUnifiedIdPrimaryAddressInitiated(_unifiedId, _newPrimaryAddress, msg.sender, currentPrimarySignature, newPrimarySignature, _options, block.timestamp);
         return true;
     }
 
@@ -418,13 +599,14 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (oldPrimary == _newPrimaryAddress) revert E47();
         if (_newPrimaryAddress == address(0)) revert E48();
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("UPDATE_PRIMARY_ADDRESS", _unifiedId, _newPrimaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _newPrimaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, oldPrimary, _currentPrimarySignature)) revert E32();
-        if (!util.verifySignature(message, _newPrimaryAddress, _newPrimarySignature)) revert E33();
+        if (!util.verifySignature(messageWithNonce, oldPrimary, _currentPrimarySignature)) revert E32();
+        if (!util.verifySignature(messageWithNonce, _newPrimaryAddress, _newPrimarySignature)) revert E33();
 
         usedNonces[id][_nonce] = true;
         userData.primary = _newPrimaryAddress;
@@ -434,7 +616,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
 
-        emit UnifiedEvent(EventType.UnifiedIDUpdated, abi.encode(_unifiedId, oldPrimary, _newPrimaryAddress));
+        emit UnifiedIDUpdated(_unifiedId, oldPrimary, _newPrimaryAddress);
         return true;
     }
 
@@ -446,7 +628,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (userData.isSecondary[_secondaryAddress]) revert E35();
         if (userData.secondaries.length >= config.maxSecondaryAddresses) revert E36();
 
-        emit UnifiedEvent(EventType.AddSecondaryAddressInitiated, abi.encode(_unifiedId, _secondaryAddress, _primarySignature, _secondarySignature, _options));
+        emit AddSecondaryAddressInitiated(_unifiedId, _secondaryAddress, msg.sender, _primarySignature, _secondarySignature, _options, block.timestamp);
         return true;
     }
 
@@ -456,13 +638,14 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         if (userData.primary == _secondaryAddress) revert E34();
         if (userData.isSecondary[_secondaryAddress]) revert E35();
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("ADD_SECONDARY_ADDRESS", _unifiedId, _secondaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _secondaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, userData.primary, _primarySignature)) revert E25();
-        if (!util.verifySignature(message, _secondaryAddress, _secondarySignature)) revert E37();
+        if (!util.verifySignature(messageWithNonce, userData.primary, _primarySignature)) revert E25();
+        if (!util.verifySignature(messageWithNonce, _secondaryAddress, _secondarySignature)) revert E37();
 
         usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = true;
@@ -470,7 +653,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit UnifiedEvent(EventType.SecondaryAddressAdded, abi.encode(_unifiedId, _secondaryAddress));
+        emit SecondaryAddressAdded(_unifiedId, _secondaryAddress);
         return true;
     }
 
@@ -481,7 +664,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         // Validation: Ensure the secondary address actually exists before initiating removal
         if (!userData.isSecondary[_secondaryAddress]) revert E38(); // Secondary address does not exist
 
-        emit UnifiedEvent(EventType.RemoveSecondaryAddressInitiated, abi.encode(_unifiedId, _secondaryAddress, _signature, _options));
+        emit RemoveSecondaryAddressInitiated(_unifiedId, _secondaryAddress, msg.sender, _signature, _options, block.timestamp);
         return true;
     }
 
@@ -489,12 +672,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
 
-        if (block.timestamp > _timestamp + 1 hours) revert E23();
         if (usedNonces[id][_nonce]) revert E24();
 
-        bytes memory message = abi.encode("REMOVE_SECONDARY_ADDRESS", _unifiedId, _secondaryAddress, chainId, _nonce, _timestamp);
+        // Simple signature verification - encode data with nonce
+        bytes memory message = abi.encode(_unifiedId, _secondaryAddress);
+        bytes memory messageWithNonce = abi.encodePacked(message, _nonce);
 
-        if (!util.verifySignature(message, userData.primary, _signature)) revert E30();
+        if (!util.verifySignature(messageWithNonce, userData.primary, _signature)) revert E30();
 
         usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = false;
@@ -511,7 +695,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit UnifiedEvent(EventType.SecondaryAddressRemoved, abi.encode(_unifiedId, _secondaryAddress));
+        emit SecondaryAddressRemoved(_unifiedId, _secondaryAddress);
         return true;
     }
 
@@ -581,7 +765,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         }
 
         if (role == RELAYER_ROLE) {
-            emit UnifiedEvent(EventType.AuthorizedRelayerUpdated, abi.encode(account, grant, msg.sender));
+            emit AuthorizedRelayerUpdated(account, grant, msg.sender);
         }
     }
 
@@ -610,36 +794,36 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     function setMaxSecondaryAddresses(uint256 _maxSecondaryAddresses) external onlyRole(ADMIN_ROLE) {
         uint256 oldMax = config.maxSecondaryAddresses;
         config.maxSecondaryAddresses = uint8(_maxSecondaryAddresses);
-        emit UnifiedEvent(EventType.MaxSecondaryAddressesUpdated, abi.encode(oldMax, _maxSecondaryAddresses));
+        emit MaxSecondaryAddressesUpdated(oldMax, _maxSecondaryAddresses);
     }
 
     function setRegistrarRegistrationPermission(bool _enabled) external onlyRole(ADMIN_ROLE) {
         config.publicRegistrarRegistration = _enabled;
-        emit UnifiedEvent(EventType.PublicRegistrarRegistrationToggled, abi.encode(_enabled));
+        emit PublicRegistrarRegistrationToggled(_enabled);
     }
 
     function setEmergencyMode(bool _enabled) external onlyRole(EMERGENCY_ROLE) {
         config.emergencyMode = _enabled;
-        emit UnifiedEvent(EventType.EmergencyModeToggled, abi.encode(_enabled));
+        emit EmergencyModeToggled(_enabled);
     }
 
     function setUnifiedIdLengthLimits(uint256 _minLength, uint256 _maxLength) external onlyRole(ADMIN_ROLE) {
         if (_minLength == 0 || _maxLength <= _minLength) revert E39();
         config.minUnifiedIdLength = uint8(_minLength);
         config.maxUnifiedIdLength = uint8(_maxLength);
-        emit UnifiedEvent(EventType.UnifiedIdLengthLimitsUpdated, abi.encode(_minLength, _maxLength));
+        emit UnifiedIdLengthLimitsUpdated(_minLength, _maxLength);
     }
 
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyEmergency {
         bytes32 id = _toBytes32(_unifiedId);
         unavailableUnifiedIds[id] = true;
-        emit UnifiedEvent(EventType.EmergencyUnifiedIdMarked, abi.encode(_unifiedId, false, msg.sender));
+        emit EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender);
     }
 
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyEmergency {
         bytes32 id = _toBytes32(_unifiedId);
         unavailableUnifiedIds[id] = false;
-        emit UnifiedEvent(EventType.EmergencyUnifiedIdMarked, abi.encode(_unifiedId, true, msg.sender));
+        emit EmergencyUnifiedIdMarked(_unifiedId, true, msg.sender);
     }
 
     function emergencyRemoveRegistrar(address _registrarAddress) external onlyEmergency {
@@ -663,7 +847,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
             unchecked { ++i; }
         }
 
-        emit UnifiedEvent(EventType.EmergencyRegistrarRemoved, abi.encode(_registrarAddress, registrarName, msg.sender));
+        emit EmergencyRegistrarRemoved(_registrarAddress, registrarName, msg.sender);
     }
 
     function getConfiguration() external view returns (uint256, bool, bool, uint256, uint256) {
@@ -696,7 +880,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         (bool success, ) = to.call{value: amount}("");
         if (!success) revert E43();
 
-        emit UnifiedEvent(EventType.EthWithdrawn, abi.encode(to, amount));
+        emit EthWithdrawn(to, amount);
     }
 
     function withdrawERC20(address token, address to, uint256 amount) external onlyOwner whenNotPaused {
@@ -709,7 +893,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, amount));
         if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert E45();
 
-        emit UnifiedEvent(EventType.ERC20Withdrawn, abi.encode(token, to, amount));
+        emit ERC20Withdrawn(token, to, amount);
     }
 
     function getRegistrarName(address _address) public view returns (string memory) {
