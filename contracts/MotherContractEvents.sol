@@ -12,46 +12,46 @@ library MotherContractEvents {
     // === CORE OPERATION EVENTS ===
     
     event UnifiedIdRegistered(
-        string indexed unifiedId,
         address indexed masterAddress,
+        address indexed primary,
         uint256 indexed chainId,
-        address primary,
+        string unifiedId
         uint256 timestamp
     );
 
     event UnifiedIdUpdated(
-        string indexed oldUnifiedId,
-        string indexed newUnifiedId,
         address indexed masterAddress,
+        string oldUnifiedId,
+        string newUnifiedId,
         uint256 timestamp
     );
 
     event MasterAddressUpdated(
-        string indexed unifiedId,
         address indexed oldMasterAddress,
         address indexed newMasterAddress,
+        string unifiedId,
         uint256 timestamp
     );
 
     event PrimaryAddressUpdated(
-        string indexed unifiedId,
         uint256 indexed chainId,
         address indexed oldPrimary,
-        address newPrimary,
+        address indexed newPrimary,
+        string indexed unifiedId,
         uint256 timestamp
     );
 
     event SecondaryAddressAdded(
-        string indexed unifiedId,
         uint256 indexed chainId,
         address indexed secondaryAddress,
+         string unifiedId,
         uint256 timestamp
     );
 
     event SecondaryAddressRemoved(
-        string indexed unifiedId,
         uint256 indexed chainId,
         address indexed secondaryAddress,
+        string unifiedId,
         uint256 timestamp
     );
 
@@ -122,16 +122,16 @@ library MotherContractEvents {
     // === EMERGENCY EVENTS ===
     
     event EmergencyUnifiedIdMarked(
-        string indexed unifiedId,
-        bool available,
         address indexed updatedBy,
+        bool available,
+        string  unifiedId,
         uint256 timestamp
     );
 
     event EmergencyChainDataCleared(
-        string indexed unifiedId,
         uint256 indexed chainId,
         address indexed clearedBy,
+        string unifiedId,
         uint256 timestamp
     );
 

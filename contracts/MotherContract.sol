@@ -257,7 +257,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.setUnifiedIdPrimaryAddress(unifiedId, chainId, primary);
 
-        emit MotherContractEvents.UnifiedIdRegistered(unifiedId, uid.masterAddress, chainId, primary, block.timestamp);
+        emit MotherContractEvents.UnifiedIdRegistered( uid.masterAddress, chainId, primary,unifiedId, block.timestamp);
     }
 
     function updatePrimaryAddress(
@@ -292,7 +292,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.updateUnifiedIdPrimaryAddress(unifiedId, chainId, newPrimary);
 
-        emit MotherContractEvents.PrimaryAddressUpdated(unifiedId, chainId, currentPrimary, newPrimary, block.timestamp);
+        emit MotherContractEvents.PrimaryAddressUpdated(chainId, currentPrimary, newPrimary,unifiedId,  block.timestamp);
     }
 
     function addSecondaryAddress(
@@ -331,7 +331,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         // Update resolver
         resolver.addUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
 
-        emit MotherContractEvents.SecondaryAddressAdded(unifiedId, chainId, secondary, block.timestamp);
+        emit MotherContractEvents.SecondaryAddressAdded( chainId, secondary, unifiedId,block.timestamp);
     }
 
     function removeSecondaryAddress(
@@ -364,8 +364,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
                 // Update resolver
                 resolver.removeUnifiedIdSecondaryAddress(unifiedId, chainId, secondary);
-
-                emit MotherContractEvents.SecondaryAddressRemoved(unifiedId, chainId, secondary, block.timestamp);
+                emit MotherContractEvents.SecondaryAddressRemoved( chainId, secondary, unifiedId,block.timestamp);
                 break;
             }
         }
@@ -461,7 +460,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
         }
 
         delete unifiedIds[oldUnifiedId];
-        emit MotherContractEvents.UnifiedIdUpdated(newUnifiedId, oldUnifiedId, unifiedIds[newUnifiedId].masterAddress, block.timestamp);
+        emit MotherContractEvents.UnifiedIdUpdated( oldUnifiedId, unifiedIds[newUnifiedId].masterAddress, newUnifiedId,block.timestamp);
     }
 
     function updateMasterAddress(
@@ -483,7 +482,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
         unifiedIds[unifiedId].masterAddress = newMasterAddress;
 
-        emit MotherContractEvents.MasterAddressUpdated(unifiedId, currentMasterAddress, newMasterAddress, block.timestamp);
+        emit MotherContractEvents.MasterAddressUpdated( currentMasterAddress, newMasterAddress,unifiedId,, block.timestamp);
     }
 
     // === VIEW FUNCTIONS ===
@@ -631,7 +630,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
 
     function emergencyMarkUnavailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
         isUnavailableUnifiedId[_unifiedId] = true;
-        emit MotherContractEvents.EmergencyUnifiedIdMarked(_unifiedId, false, msg.sender, block.timestamp);
+        emit MotherContractEvents.EmergencyUnifiedIdMarked( msg.sender,false, _unifiedId,block.timestamp);
     }
 
     function emergencyMarkAvailable(string calldata _unifiedId) external onlyRole(EMERGENCY_ROLE) {
@@ -659,7 +658,7 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
             unchecked { ++i; }
         }
 
-        emit MotherContractEvents.EmergencyChainDataCleared(_unifiedId, _chainId, msg.sender, block.timestamp);
+        emit MotherContractEvents.EmergencyChainDataCleared(_chainId, msg.sender, _unifiedId,block.timestamp);
     }
 
     function getConfiguration() external view returns (

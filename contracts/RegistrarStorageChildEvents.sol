@@ -72,7 +72,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     
     /**
      * @notice Emitted when UnifiedID registration is initiated
-     * @param unifiedId The UnifiedID to register (indexed for filtering)
+     * @param unifiedId The UnifiedID to register
      * @param primaryAddress The primary address for the UnifiedID (indexed for filtering)
      * @param registrar The registrar who initiated the registration (indexed for filtering)
      * @param masterSignature The master signature (if applicable)
@@ -81,9 +81,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event RegisterUnifiedIdInitiated(
-        string indexed unifiedId,
         address indexed primaryAddress,
         address indexed registrar,
+        string unifiedId,
         bytes masterSignature,
         bytes primarySignature,
         bytes options,
@@ -100,9 +100,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event UpdateUnifiedIdInitiated(
-        string indexed oldUnifiedId,
-        string indexed newUnifiedId,
         address indexed registrar,
+        string oldUnifiedId,
+        string newUnifiedId,
         bytes signature,
         bytes options,
         uint256 timestamp
@@ -119,9 +119,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event UpdateUnifiedIdPrimaryAddressInitiated(
-        string indexed unifiedId,
         address indexed newPrimaryAddress,
         address indexed registrar,
+        string unifiedId,
         bytes currentPrimarySignature,
         bytes newPrimarySignature,
         bytes options,
@@ -139,9 +139,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event AddSecondaryAddressInitiated(
-        string indexed unifiedId,
         address indexed secondaryAddress,
         address indexed registrar,
+        string unifiedId,
         bytes primarySignature,
         bytes secondarySignature,
         bytes options,
@@ -158,9 +158,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event RemoveSecondaryAddressInitiated(
-        string indexed unifiedId,
         address indexed secondaryAddress,
         address indexed registrar,
+        string unifiedId,
         bytes signature,
         bytes options,
         uint256 timestamp
@@ -175,8 +175,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event UnifiedIDRegistered(
-        string indexed unifiedId,
         address indexed primaryAddress,
+        string unifiedId,
         uint256 timestamp
     );
 
@@ -188,9 +188,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param timestamp Block timestamp
      */
     event UnifiedIDChanged(
-        string indexed oldUnifiedId,
-        string indexed newUnifiedId,
         address indexed primaryAddress,
+        string oldUnifiedId,
+        string newUnifiedId,
         uint256 timestamp
     );
 
@@ -201,9 +201,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param newPrimary The new primary address (indexed)
      */
     event UnifiedIDUpdated(
-        string indexed unifiedId,
         address indexed oldPrimary,
-        address indexed newPrimary
+        address indexed newPrimary,
+        string unifiedId,
     );
 
     /**
@@ -212,8 +212,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param secondaryAddress The secondary address added (indexed)
      */
     event SecondaryAddressAdded(
-        string indexed unifiedId,
-        address indexed secondaryAddress
+        address indexed secondaryAddress,
+         string unifiedId
     );
 
     /**
@@ -222,8 +222,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      * @param secondaryAddress The secondary address removed (indexed)
      */
     event SecondaryAddressRemoved(
-        string indexed unifiedId,
-        address indexed secondaryAddress
+        address indexed secondaryAddress,
+        string unifiedId,
     );
 
     // === ADMIN EVENTS ===
@@ -484,7 +484,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (registrarNameToAddress[id] != address(0)) revert E21();
         if (resolveAddressFromUnifiedId[id] != address(0)) revert E22();
 
-        emit RegisterUnifiedIdInitiated(_unifiedId, _primaryAddress, msg.sender, _masterSignature, _primarySignature, _options, block.timestamp);
+        emit RegisterUnifiedIdInitiated( _primaryAddress, msg.sender,_unifiedId, _masterSignature, _primarySignature, _options, block.timestamp);
         return true;
     }
 
@@ -514,13 +514,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.setUnifiedIdPrimaryAddress(_unifiedId, chainId, _primaryAddress);
 
-        emit UnifiedIDRegistered(_unifiedId, _primaryAddress, block.timestamp);
+        emit UnifiedIDRegistered( _primaryAddress,_unifiedId, block.timestamp);
         return true;
     }
 
     function initiateUpdateUnifiedId(string calldata _oldUnifiedId, string calldata _newUnifiedId, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
         if (!util.isUnifiedIdValid(_newUnifiedId)) revert E27();
-        emit UpdateUnifiedIdInitiated(_oldUnifiedId, _newUnifiedId, msg.sender, _signature, _options, block.timestamp);
+        emit UpdateUnifiedIdInitiated( msg.sender,_newUnifiedId,_oldUnifiedId, _signature, _options, block.timestamp);
         return true;
     }
 
@@ -570,12 +570,12 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         unavailableUnifiedIds[newId] = true;
         delete userAddresses[oldId];
 
-        emit UnifiedIDChanged(_oldUnifiedId, _newUnifiedId, currentPrimary, block.timestamp);
+        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId,block.timestamp);
         return true;
     }
 
     function initiatePrimaryAddressChange(string calldata _unifiedId, address _newPrimaryAddress, bytes calldata currentPrimarySignature, bytes calldata newPrimarySignature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        emit UpdateUnifiedIdPrimaryAddressInitiated(_unifiedId, _newPrimaryAddress, msg.sender, currentPrimarySignature, newPrimarySignature, _options, block.timestamp);
+        emit UpdateUnifiedIdPrimaryAddressInitiated( _newPrimaryAddress, msg.sender,_unifiedId, currentPrimarySignature, newPrimarySignature, _options, block.timestamp);
         return true;
     }
 
@@ -599,7 +599,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
 
-        emit UnifiedIDUpdated(_unifiedId, oldPrimary, _newPrimaryAddress);
+        emit UnifiedIDUpdated( oldPrimary, _newPrimaryAddress,_unifiedId);
         return true;
     }
 
@@ -611,7 +611,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (userData.isSecondary[_secondaryAddress]) revert E35();
         if (userData.secondaries.length >= config.maxSecondaryAddresses) revert E36();
 
-        emit AddSecondaryAddressInitiated(_unifiedId, _secondaryAddress, msg.sender, _primarySignature, _secondarySignature, _options, block.timestamp);
+        emit AddSecondaryAddressInitiated( _secondaryAddress, msg.sender,_unifiedId, _primarySignature, _secondarySignature, _options, block.timestamp);
         return true;
     }
 
@@ -632,7 +632,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit SecondaryAddressAdded(_unifiedId, _secondaryAddress);
+        emit SecondaryAddressAdded( _secondaryAddress,_unifiedId);
         return true;
     }
 
@@ -643,7 +643,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         // Validation: Ensure the secondary address actually exists before initiating removal
         if (!userData.isSecondary[_secondaryAddress]) revert E38(); // Secondary address does not exist
 
-        emit RemoveSecondaryAddressInitiated(_unifiedId, _secondaryAddress, msg.sender, _signature, _options, block.timestamp);
+        emit RemoveSecondaryAddressInitiated( _secondaryAddress, msg.sender,_unifiedId, _signature, _options, block.timestamp);
         return true;
     }
 
@@ -670,7 +670,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit SecondaryAddressRemoved(_unifiedId, _secondaryAddress);
+        emit SecondaryAddressRemoved( _secondaryAddress,_unifiedId);
         return true;
     }
 
