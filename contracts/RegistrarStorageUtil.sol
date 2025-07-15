@@ -138,9 +138,8 @@ function initialize(address initialOwner) public initializer {
 /**
  * @notice Authorizes contract upgrades
  * @dev Only UPGRADER_ROLE, ADMIN_ROLE, or owner can authorize upgrades
- * @param newImplementation Address of the new implementation
  */
-function _authorizeUpgrade(address newImplementation) internal override {
+function _authorizeUpgrade(address /* newImplementation */) internal view override {
     require(
         hasRole(UPGRADER_ROLE, msg.sender) || hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(),
         "AccessControl: caller is not authorized"
