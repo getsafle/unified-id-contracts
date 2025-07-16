@@ -138,9 +138,8 @@ function initialize(address initialOwner) public initializer {
 /**
  * @notice Authorizes contract upgrades
  * @dev Only UPGRADER_ROLE, ADMIN_ROLE, or owner can authorize upgrades
- * @param newImplementation Address of the new implementation
  */
-function _authorizeUpgrade(address newImplementation) internal override {
+function _authorizeUpgrade(address /* newImplementation */) internal view override {
     require(
         hasRole(UPGRADER_ROLE, msg.sender) || hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner(),
         "AccessControl: caller is not authorized"
@@ -420,129 +419,13 @@ function _authorizeUpgrade(address newImplementation) internal override {
         return ecrecover(hash, v, r, s);
     }
 
-    /// @notice EIP-712 domain separator type hash constant
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-    );
-
-    /// @notice Mapping to track nonces for each address to prevent replay attacks
-    mapping(address => uint256) public nonces;
-
     /**
-     * @notice Structure containing signature verification parameters
-     * @param nonce Current nonce for the signer to prevent replay attacks
-     * @param deadline Timestamp after which the signature expires
-     * @param chainId Chain ID to prevent cross-chain signature reuse
-     * @param contractAddress Contract address to prevent cross-contract signature reuse
-     * @param domainSeparator EIP-712 domain separator for structured data signing
-     */
-    struct SignatureParams {
-        uint256 nonce;
-        uint256 deadline;
-        uint256 chainId;
-        address contractAddress;
-        bytes32 domainSeparator;
-    }
-
-    /**
-     * @notice Verifies a signature using secure EIP-712 structured data signing
-     * @dev Implements comprehensive security checks including nonce tracking, deadline verification, and chain validation
-     * @param data The data that was signed
-     * @param params Signature verification parameters including nonce, deadline, chain ID, and domain separator
-     * @param signer Expected signer address
-     * @param signature The signature to verify
-     * @return True if signature is valid, false otherwise
-     * @custom:requirements
-     * - Signature must not be expired (deadline check)
-     * - Must be called on correct chain (chain ID check)
-     * - Nonce must match expected value for signer
-     * @custom:security
-     * - Automatically increments nonce to prevent replay attacks
-     * - Uses EIP-712 structured data to prevent signature malleability
-     * - Validates chain ID to prevent cross-chain attacks
-     * @custom:reverts
-     * - "Signature expired" if current time > deadline
-     * - "Wrong chain" if chain ID doesn't match
-     * - "Invalid nonce" if nonce doesn't match expected value
-     */
-    function verifySignatureSecure(
-        bytes memory data,
-        SignatureParams memory params,
-        address signer,
-        bytes memory signature
-    ) public returns (bool) {
-        // Check deadline
-        require(block.timestamp <= params.deadline, "Signature expired");
-
-        // Check chain
-        require(block.chainid == params.chainId, "Wrong chain");
-
-        // Check and update nonce
-        require(nonces[signer] == params.nonce, "Invalid nonce");
-        nonces[signer]++;
-
-        // Build structured message
-        bytes32 messageHash = keccak256(abi.encode(
-            keccak256("UnifiedIDOperation(bytes data,uint256 nonce,uint256 deadline,uint256 chainId,address contractAddress)"),
-            keccak256(data),
-            params.nonce,
-            params.deadline,
-            params.chainId,
-            params.contractAddress
-        ));
-
-        // EIP-712 style hash
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            params.domainSeparator,
-            messageHash
-        ));
-
-        return recoverSigner(digest, signature) == signer;
-    }
-
-    /**
-     * @notice Returns the current nonce for a given signer address
-     * @dev Used to get the next nonce value for signature creation
-     * @param signer Address to get nonce for
-     * @return Current nonce value for the signer
-     */
-    function getCurrentNonce(address signer) external view returns (uint256) {
-        return nonces[signer];
-    }
-
-    /**
-     * @notice Creates an EIP-712 domain separator for structured data signing
-     * @dev Pure function to generate domain separator for any contract
-     * @param name The name of the signing domain
-     * @param version The version of the signing domain
-     * @param chainId The chain ID for domain separation
-     * @param verifyingContract The contract address for domain separation
-     * @return The computed domain separator hash
-     */
-    function createDomainSeparator(
-        string memory name,
-        string memory version,
-        uint256 chainId,
-        address verifyingContract
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            DOMAIN_TYPEHASH,
-            keccak256(bytes(name)),
-            keccak256(bytes(version)),
-            chainId,
-            verifyingContract
-        ));
-    }
-
-    /**
-     * @notice Legacy signature verification function (deprecated)
-     * @dev Kept for backward compatibility but use verifySignatureSecure() for new implementations
+     * @notice Simple signature verification function
+     * @dev Verifies a signature using Ethereum signed message format
      * @param _data The data that was signed
      * @param _expectedSigner Expected signer address
      * @param _signature The signature to verify
      * @return True if signature is valid
-     * @custom:deprecated Use verifySignatureSecure() instead for enhanced security
      */
     function verifySignature(
         bytes memory _data,
@@ -554,9 +437,6 @@ function _authorizeUpgrade(address newImplementation) internal override {
         address signer = recoverSigner(ethSignedMessageHash, _signature);
         return signer == _expectedSigner;
     }
-
-
-
 
     /**
      * @notice Converts a string to lowercase
