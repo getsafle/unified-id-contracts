@@ -488,33 +488,20 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function completeRegisterUnifiedId(string calldata _unifiedId, address _primaryAddress, bytes calldata _masterSignature, bytes calldata _primarySignature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+    function completeRegisterUnifiedId(
+        string calldata _unifiedId,
+        address _primaryAddress
+    ) external onlyAuthorizedRelayer returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
-        if (usedNonces[id][_nonce]) revert E24();
-
-        bytes memory messageWithNonce = abi.encodePacked(abi.encode(_unifiedId, _primaryAddress), _nonce);
-
-        if (!util.verifySignature(messageWithNonce, _primaryAddress, _primarySignature)) revert E25();
-
-        if (_masterSignature.length != 0) {
-            if (!util.verifySignature(messageWithNonce, _primaryAddress, _masterSignature)) revert E26();
-        }
-
-        usedNonces[id][_nonce] = true;
-
         UserData storage userData = userAddresses[id];
         userData.primary = _primaryAddress;
         userData.exists = true;
-
         resolveAddressFromUnifiedId[id] = _primaryAddress;
         resolveUnifiedIdFromAddress[_primaryAddress] = id;
         registeredUnifiedIds[id] = true;
-        totalRegisteredUnifiedIds++;
         unavailableUnifiedIds[id] = true;
-
-        resolver.setUnifiedIdPrimaryAddress(_unifiedId, chainId, _primaryAddress);
-
-        emit UnifiedIDRegistered( _primaryAddress,_unifiedId, block.timestamp);
+        totalRegisteredUnifiedIds++;
+        emit UnifiedIDRegistered(_primaryAddress, _unifiedId, block.timestamp);
         return true;
     }
 
@@ -524,7 +511,10 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function completeUpdateUnifiedId(string memory _oldUnifiedId, string memory _newUnifiedId, bytes calldata _signature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+    function completeUpdateUnifiedId(
+        string memory _oldUnifiedId,
+        string memory _newUnifiedId
+    ) external onlyAuthorizedRelayer returns (bool) {
         bytes32 oldId = _toBytes32(_oldUnifiedId);
         bytes32 newId = _toBytes32(_newUnifiedId);
 
@@ -534,12 +524,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         UserData storage userData = userAddresses[oldId];
         address currentPrimary = userData.primary;
-
-        if (usedNonces[oldId][_nonce]) revert E24();
-
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_oldUnifiedId, _newUnifiedId), _nonce), currentPrimary, _signature)) revert E30();
-
-        usedNonces[oldId][_nonce] = true;
 
         resolveAddressFromUnifiedId[newId] = currentPrimary;
         delete resolveAddressFromUnifiedId[oldId];
@@ -570,7 +554,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         unavailableUnifiedIds[newId] = true;
         delete userAddresses[oldId];
 
-        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId,block.timestamp);
+        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId, block.timestamp);
         return true;
     }
 
@@ -579,19 +563,17 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function finalizePrimaryAddressChange(string calldata _unifiedId, address _newPrimaryAddress, bytes calldata _currentPrimarySignature, bytes calldata _newPrimarySignature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+    function finalizePrimaryAddressChange(
+        string calldata _unifiedId,
+        address _newPrimaryAddress
+    ) external onlyAuthorizedRelayer returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
         address oldPrimary = userData.primary;
 
         if (oldPrimary == _newPrimaryAddress) revert E47();
         if (_newPrimaryAddress == address(0)) revert E48();
-        if (usedNonces[id][_nonce]) revert E24();
 
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _newPrimaryAddress), _nonce), oldPrimary, _currentPrimarySignature)) revert E32();
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _newPrimaryAddress), _nonce), _newPrimaryAddress, _newPrimarySignature)) revert E33();
-
-        usedNonces[id][_nonce] = true;
         userData.primary = _newPrimaryAddress;
         resolveAddressFromUnifiedId[id] = _newPrimaryAddress;
         resolveUnifiedIdFromAddress[_newPrimaryAddress] = id;
@@ -599,7 +581,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
 
-        emit UnifiedIDUpdated( oldPrimary, _newPrimaryAddress,_unifiedId);
+        emit UnifiedIDUpdated(oldPrimary, _newPrimaryAddress, _unifiedId);
         return true;
     }
 
@@ -615,24 +597,22 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function completeAddSecondaryAddress(string calldata _unifiedId, address _secondaryAddress, bytes calldata _primarySignature, bytes calldata _secondarySignature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+    function completeAddSecondaryAddress(
+        string calldata _unifiedId,
+        address _secondaryAddress
+    ) external onlyAuthorizedRelayer returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
 
         if (userData.primary == _secondaryAddress) revert E34();
         if (userData.isSecondary[_secondaryAddress]) revert E35();
-        if (usedNonces[id][_nonce]) revert E24();
 
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), userData.primary, _primarySignature)) revert E25();
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), _secondaryAddress, _secondarySignature)) revert E37();
-
-        usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = true;
         userData.secondaries.push(_secondaryAddress);
 
         resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit SecondaryAddressAdded( _secondaryAddress,_unifiedId);
+        emit SecondaryAddressAdded(_secondaryAddress, _unifiedId);
         return true;
     }
 
@@ -647,15 +627,13 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function completeRemoveSecondaryAddress(string calldata _unifiedId, address _secondaryAddress, bytes calldata _signature, uint256 _nonce, uint256 _timestamp) external whenNotPaused onlyAuthorizedRelayer returns (bool) {
+    function completeRemoveSecondaryAddress(
+        string calldata _unifiedId,
+        address _secondaryAddress
+    ) external onlyAuthorizedRelayer returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
 
-        if (usedNonces[id][_nonce]) revert E24();
-
-        if (!util.verifySignature(abi.encodePacked(abi.encode(_unifiedId, _secondaryAddress), _nonce), userData.primary, _signature)) revert E30();
-
-        usedNonces[id][_nonce] = true;
         userData.isSecondary[_secondaryAddress] = false;
 
         uint256 length = userData.secondaries.length;
@@ -670,7 +648,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
         resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
 
-        emit SecondaryAddressRemoved( _secondaryAddress,_unifiedId);
+        emit SecondaryAddressRemoved(_secondaryAddress, _unifiedId);
         return true;
     }
 
