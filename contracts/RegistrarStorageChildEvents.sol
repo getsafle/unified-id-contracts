@@ -203,7 +203,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     event UnifiedIDUpdated(
         address indexed oldPrimary,
         address indexed newPrimary,
-        string unifiedId,
+        string unifiedId
     );
 
     /**
@@ -223,7 +223,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      */
     event SecondaryAddressRemoved(
         address indexed secondaryAddress,
-        string unifiedId,
+        string unifiedId
     );
 
     // === ADMIN EVENTS ===
@@ -488,7 +488,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function completeRegisterUnifiedId(
+     function completeRegisterUnifiedId(
         string calldata _unifiedId,
         address _primaryAddress
     ) external onlyAuthorizedRelayer returns (bool) {
@@ -507,11 +507,11 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
 
     function initiateUpdateUnifiedId(string calldata _oldUnifiedId, string calldata _newUnifiedId, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
         if (!util.isUnifiedIdValid(_newUnifiedId)) revert E27();
-        emit UpdateUnifiedIdInitiated( msg.sender,_newUnifiedId,_oldUnifiedId, _signature, _options, block.timestamp);
+        emit UpdateUnifiedIdInitiated( msg.sender,_oldUnifiedId,_newUnifiedId, _signature, _options, block.timestamp);
         return true;
     }
 
-    function completeUpdateUnifiedId(
+   function completeUpdateUnifiedId(
         string memory _oldUnifiedId,
         string memory _newUnifiedId
     ) external onlyAuthorizedRelayer returns (bool) {
@@ -554,7 +554,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         unavailableUnifiedIds[newId] = true;
         delete userAddresses[oldId];
 
-        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId, block.timestamp);
+        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId,block.timestamp);
         return true;
     }
 

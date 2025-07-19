@@ -15,7 +15,7 @@ library MotherContractEvents {
         address indexed masterAddress,
         address indexed primary,
         uint256 indexed chainId,
-        string unifiedId
+        string unifiedId,
         uint256 timestamp
     );
 
@@ -37,14 +37,14 @@ library MotherContractEvents {
         uint256 indexed chainId,
         address indexed oldPrimary,
         address indexed newPrimary,
-        string indexed unifiedId,
+        string unifiedId,
         uint256 timestamp
     );
 
     event SecondaryAddressAdded(
         uint256 indexed chainId,
         address indexed secondaryAddress,
-         string unifiedId,
+        string unifiedId,
         uint256 timestamp
     );
 
