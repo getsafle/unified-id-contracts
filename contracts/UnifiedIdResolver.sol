@@ -852,8 +852,8 @@ contract UnifiedIdResolver is IUnifiedIdResolver, Initializable, UUPSUpgradeable
      * - Simplified iteration over all addresses
      * @custom:array-structure [primary, secondary1, secondary2, ...]
      */
-    function getAllAddresses(string calldata unifiedId, uint256 chainId) external view override returns (address[] memory allAddresses) {
-        return _getAllAddresses(unifiedId,chainId );
+    function getAllAddresses(string calldata unifiedId) external view override returns (address[] memory allAddresses) {
+        return _getAllAddresses(unifiedId, 0);
     }
 
     /**

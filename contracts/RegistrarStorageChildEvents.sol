@@ -294,9 +294,9 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     // === OPTIMIZED STORAGE STRUCTS ===
     struct UserData {
         address primary;
-        mapping(address => bool) isSecondary;
-        address[] secondaries;
         bool exists;
+        mapping(address => bool) isSecondary;
+       address[] secondaries;
     }
 
     struct PackedConfig {
@@ -366,10 +366,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         _;
     }
 
-    modifier onlyAuthorizedRelayer() {
-        require(hasRole(RELAYER_ROLE, msg.sender));
-        _;
-    }
 
     modifier onlyAdmin() {
         require(hasRole(ADMIN_ROLE, msg.sender) || msg.sender == owner());
@@ -380,7 +376,6 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         if (config.emergencyMode) revert E13();
         _;
     }
-
     modifier publicRegistrarAllowed() {
         if (!config.publicRegistrarRegistration && !hasRole(ADMIN_ROLE, msg.sender) && msg.sender != owner()) revert E14();
         _;
@@ -491,7 +486,7 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
      function completeRegisterUnifiedId(
         string calldata _unifiedId,
         address _primaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
+    ) external onlyRegistrar returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
         UserData storage userData = userAddresses[id];
         userData.primary = _primaryAddress;
@@ -505,85 +500,97 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         return true;
     }
 
-    function initiateUpdateUnifiedId(string calldata _oldUnifiedId, string calldata _newUnifiedId, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
+function completeUpdateUnifiedId(
+    string memory _oldUnifiedId,
+    string memory _newUnifiedId
+) external onlyRegistrar returns (bool) {
+    bytes32 oldId = _toBytes32(_oldUnifiedId);
+    bytes32 newId = _toBytes32(_newUnifiedId);
+
+    if (!registeredUnifiedIds[oldId]) revert E28();
+    if (registeredUnifiedIds[newId]) revert E29();
+    if (oldId == newId) revert E46();
+
+    address currentPrimary = userAddresses[oldId].primary;
+    
+    UserData storage oldData = userAddresses[oldId];
+    UserData storage newData = userAddresses[newId];
+    
+    // Copy basic fields
+    newData.primary = oldData.primary;
+    newData.exists = true;
+    
+    // Copy secondary addresses (if any)
+    for (uint256 i = 0; i < oldData.secondaries.length; i++) {
+        address secondaryAddr = oldData.secondaries[i];
+        newData.secondaries.push(secondaryAddr);
+        newData.isSecondary[secondaryAddr] = true;
+    }
+    
+    delete resolveUnifiedIdFromAddress[currentPrimary];
+    resolveUnifiedIdFromAddress[currentPrimary] = newId;
+    
+    // Update address mappings
+    resolveAddressFromUnifiedId[newId] = currentPrimary;
+    delete resolveAddressFromUnifiedId[oldId];
+    
+    registeredUnifiedIds[newId] = true;
+    delete registeredUnifiedIds[oldId];
+    unavailableUnifiedIds[oldId] = true;  // Mark old as unavailable
+    unavailableUnifiedIds[newId] = true;  // Mark new as taken
+    
+    // Clean up old user data
+    delete userAddresses[oldId];
+    
+    emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId, block.timestamp);
+    return true;
+}
+
+     function initiateUpdateUnifiedId(string calldata _oldUnifiedId, string calldata _newUnifiedId, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_oldUnifiedId) unifiedIdDoesNotExist(_newUnifiedId) onlyRegistrar returns (bool) {
         if (!util.isUnifiedIdValid(_newUnifiedId)) revert E27();
         emit UpdateUnifiedIdInitiated( msg.sender,_oldUnifiedId,_newUnifiedId, _signature, _options, block.timestamp);
         return true;
     }
-
-   function completeUpdateUnifiedId(
-        string memory _oldUnifiedId,
-        string memory _newUnifiedId
-    ) external onlyAuthorizedRelayer returns (bool) {
-        bytes32 oldId = _toBytes32(_oldUnifiedId);
-        bytes32 newId = _toBytes32(_newUnifiedId);
-
-        if (!registeredUnifiedIds[oldId]) revert E28();
-        if (registeredUnifiedIds[newId]) revert E29();
-        if (oldId == newId) revert E46();
-
-        UserData storage userData = userAddresses[oldId];
-        address currentPrimary = userData.primary;
-
-        resolveAddressFromUnifiedId[newId] = currentPrimary;
-        delete resolveAddressFromUnifiedId[oldId];
-        resolveUnifiedIdFromAddress[currentPrimary] = newId;
-
-        UserData storage newUserData = userAddresses[newId];
-        newUserData.primary = currentPrimary;
-        newUserData.exists = true;
-
-        resolver.clearUnifiedIdMappings(_oldUnifiedId, chainId);
-        resolver.setUnifiedIdPrimaryAddress(_newUnifiedId, chainId, currentPrimary);
-
-        uint256 secLength = userData.secondaries.length;
-        for (uint256 i; i < secLength;) {
-            address secondaryAddr = userData.secondaries[i];
-            if (newUserData.isSecondary[secondaryAddr]) revert E31();
-
-            newUserData.isSecondary[secondaryAddr] = true;
-            newUserData.secondaries.push(secondaryAddr);
-            resolver.addUnifiedIdSecondaryAddress(_newUnifiedId, chainId, secondaryAddr);
-
-            unchecked { ++i; }
-        }
-
-        delete registeredUnifiedIds[oldId];
-        registeredUnifiedIds[newId] = true;
-        unavailableUnifiedIds[oldId] = true;
-        unavailableUnifiedIds[newId] = true;
-        delete userAddresses[oldId];
-
-        emit UnifiedIDChanged(currentPrimary, _oldUnifiedId, _newUnifiedId,block.timestamp);
-        return true;
-    }
-
+    
     function initiatePrimaryAddressChange(string calldata _unifiedId, address _newPrimaryAddress, bytes calldata currentPrimarySignature, bytes calldata newPrimarySignature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         emit UpdateUnifiedIdPrimaryAddressInitiated( _newPrimaryAddress, msg.sender,_unifiedId, currentPrimarySignature, newPrimarySignature, _options, block.timestamp);
         return true;
     }
 
-    function finalizePrimaryAddressChange(
-        string calldata _unifiedId,
-        address _newPrimaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
-        bytes32 id = _toBytes32(_unifiedId);
-        UserData storage userData = userAddresses[id];
-        address oldPrimary = userData.primary;
+   function finalizePrimaryAddressChange(
+    string calldata _unifiedId,
+    address _newPrimaryAddress
+) external onlyRegistrar returns (bool) {
+    bytes32 id = _toBytes32(_unifiedId);
+    UserData storage userData = userAddresses[id];
+    address oldPrimary = userData.primary;
 
-        if (oldPrimary == _newPrimaryAddress) revert E47();
-        if (_newPrimaryAddress == address(0)) revert E48();
+    if (oldPrimary == _newPrimaryAddress) revert E47();
+    if (_newPrimaryAddress == address(0)) revert E48();
 
-        userData.primary = _newPrimaryAddress;
-        resolveAddressFromUnifiedId[id] = _newPrimaryAddress;
-        resolveUnifiedIdFromAddress[_newPrimaryAddress] = id;
-        resolveUnifiedIdFromAddress[oldPrimary] = bytes32(0);
-
-        resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
-
-        emit UnifiedIDUpdated(oldPrimary, _newPrimaryAddress, _unifiedId);
-        return true;
+    // Check resolver state
+    address currentPrimaryInResolver = resolver.getPrimaryAddress(_unifiedId, chainId);
+    
+    // Check if new address is already primary for another UnifiedId
+    string memory existingUnifiedId = resolver.getUnifiedIdFromAddress(_newPrimaryAddress, chainId);
+    if (bytes(existingUnifiedId).length > 0 && keccak256(bytes(existingUnifiedId)) != keccak256(bytes(_unifiedId))) {
+        revert(); // Address already has a different UnifiedId
     }
+
+    // Update local state
+    userData.primary = _newPrimaryAddress;
+    resolveAddressFromUnifiedId[id] = _newPrimaryAddress;
+    resolveUnifiedIdFromAddress[_newPrimaryAddress] = id;
+    resolveUnifiedIdFromAddress[oldPrimary] = bytes32(0);
+
+    // Only update resolver if the primary address is different from current resolver state
+    if (currentPrimaryInResolver != _newPrimaryAddress) {
+        resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
+    }
+
+    emit UnifiedIDUpdated(oldPrimary, _newPrimaryAddress, _unifiedId);
+    return true;
+}
 
     function initiateAddSecondaryAddress(string calldata _unifiedId, address _secondaryAddress, bytes calldata _primarySignature, bytes calldata _secondarySignature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
         bytes32 id = _toBytes32(_unifiedId);
@@ -598,76 +605,75 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
     }
 
     function completeAddSecondaryAddress(
-        string calldata _unifiedId,
-        address _secondaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
-        bytes32 id = _toBytes32(_unifiedId);
-        UserData storage userData = userAddresses[id];
+    string calldata _unifiedId,
+    address _secondaryAddress
+) external onlyRegistrar returns (bool) {
+    bytes32 id = _toBytes32(_unifiedId);
+    UserData storage userData = userAddresses[id];
+    
+    // Only check if it's the primary address
+    if (userData.primary == _secondaryAddress) revert E34();
 
-        if (userData.primary == _secondaryAddress) revert E34();
-        if (userData.isSecondary[_secondaryAddress]) revert E35();
-
-        userData.isSecondary[_secondaryAddress] = true;
-        userData.secondaries.push(_secondaryAddress);
-
-        resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
-
+    // Check if secondary address already exists in resolver
+    (, bool isSecondaryInResolver) = resolver.isAddressAssociated(_unifiedId, chainId, _secondaryAddress);
+    
+    if (isSecondaryInResolver) {
+        // Secondary address already exists in resolver, just emit event
         emit SecondaryAddressAdded(_secondaryAddress, _unifiedId);
-        return true;
+    } else {
+        // Secondary address doesn't exist, add it to resolver
+        resolver.addUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
+        emit SecondaryAddressAdded(_secondaryAddress, _unifiedId);
     }
+    
+    return true;
+}
 
     function initiateRemoveSecondaryAddress(string calldata _unifiedId, address _secondaryAddress, bytes calldata _signature, bytes calldata _options) external payable whenNotPaused unifiedIdExists(_unifiedId) onlyRegistrar returns (bool) {
-        bytes32 id = _toBytes32(_unifiedId);
-        UserData storage userData = userAddresses[id];
+    (, bool isSecondaryInResolver) = resolver.isAddressAssociated(_unifiedId, chainId, _secondaryAddress);
+    
+    if (!isSecondaryInResolver) revert E38(); // Secondary address does not exist
 
-        // Validation: Ensure the secondary address actually exists before initiating removal
-        if (!userData.isSecondary[_secondaryAddress]) revert E38(); // Secondary address does not exist
+    emit RemoveSecondaryAddressInitiated(_secondaryAddress, msg.sender, _unifiedId, _signature, _options, block.timestamp);
+    return true;
+}
 
-        emit RemoveSecondaryAddressInitiated( _secondaryAddress, msg.sender,_unifiedId, _signature, _options, block.timestamp);
-        return true;
-    }
-
-    function completeRemoveSecondaryAddress(
-        string calldata _unifiedId,
-        address _secondaryAddress
-    ) external onlyAuthorizedRelayer returns (bool) {
-        bytes32 id = _toBytes32(_unifiedId);
-        UserData storage userData = userAddresses[id];
-
-        userData.isSecondary[_secondaryAddress] = false;
-
-        uint256 length = userData.secondaries.length;
-        for (uint256 i; i < length;) {
-            if (userData.secondaries[i] == _secondaryAddress) {
-                userData.secondaries[i] = userData.secondaries[length - 1];
-                userData.secondaries.pop();
-                break;
-            }
-            unchecked { ++i; }
-        }
-
+ function completeRemoveSecondaryAddress(
+    string calldata _unifiedId,
+    address _secondaryAddress
+) external onlyRegistrar returns (bool) {
+    // Check if secondary address exists in resolver
+    (, bool isSecondaryInResolver) = resolver.isAddressAssociated(_unifiedId, chainId, _secondaryAddress);
+    
+    if (isSecondaryInResolver) {
+        // Secondary address exists in resolver, remove it
         resolver.removeUnifiedIdSecondaryAddress(_unifiedId, chainId, _secondaryAddress);
-
         emit SecondaryAddressRemoved(_secondaryAddress, _unifiedId);
-        return true;
+    } else {
+        // Secondary address doesn't exist in resolver, just emit event for consistency
+        emit SecondaryAddressRemoved(_secondaryAddress, _unifiedId);
     }
+    
+    return true;
+}
 
     // === VIEW FUNCTIONS ===
     function isPrimaryAddress(string calldata _unifiedId, address _address) external view returns (bool) {
         return userAddresses[_toBytes32(_unifiedId)].primary == _address;
     }
 
-    function isSecondaryAddress(string calldata _unifiedId, address _address) external view returns (bool) {
-        return userAddresses[_toBytes32(_unifiedId)].isSecondary[_address];
-    }
-
+   function isSecondaryAddress(string calldata _unifiedId, address _address) external view returns (bool) {
+    (, bool isSecondary) = resolver.isAddressAssociated(_unifiedId, chainId, _address);
+    return isSecondary;
+}
     function getPrimaryAddress(string calldata _unifiedId) external view returns (address) {
         return userAddresses[_toBytes32(_unifiedId)].primary;
     }
 
-    function getSecondaryAddresses(string calldata _unifiedId) external view returns (address[] memory) {
-        return userAddresses[_toBytes32(_unifiedId)].secondaries;
-    }
+   function getSecondaryAddresses(string calldata _unifiedId) external view returns (address[] memory) {
+    (, address[] memory secondaries) = resolver.getAddresses(_unifiedId, chainId);
+    return secondaries;
+}
 
     function getTotalRegisteredUnifiedIds() external view returns (uint256) {
         return totalRegisteredUnifiedIds;

@@ -371,32 +371,66 @@ contract RegistrarStorageMother is Initializable, UUPSUpgradeable, PausableUpgra
     }
 
     function updateUnifiedId(
-        string calldata oldUnifiedId,
-        string calldata newUnifiedId,
-        bytes calldata signature
-    ) external onlyRelayer whenNotPaused {
-        if (isUnavailableUnifiedId[oldUnifiedId]) revert E7();
-        if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
-        if (!unifiedIds[oldUnifiedId].exists) revert E20();
-        if (unifiedIds[newUnifiedId].exists) revert E21();
+    string calldata oldUnifiedId,
+    string calldata newUnifiedId,
+    bytes calldata signature
+) external onlyRelayer whenNotPaused {
+    if (isUnavailableUnifiedId[oldUnifiedId]) revert E7();
+    if (isUnavailableUnifiedId[newUnifiedId]) revert E7();
+    if (!unifiedIds[oldUnifiedId].exists) revert E20();
+    if (unifiedIds[newUnifiedId].exists) revert E21();
 
-        // EDGE CASE PROTECTION: Prevent updating to the same UnifiedId
-        if (keccak256(bytes(oldUnifiedId)) == keccak256(bytes(newUnifiedId))) revert E31();
+    // Verify signature
+    address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
+    bytes memory data = abi.encode(oldUnifiedId, newUnifiedId);
+    uint256 currentNonce = nonces[oldUnifiedId];
+    
+    if (!util.verifySignature(abi.encodePacked(data, currentNonce), masterAddress, signature)) revert E23();
 
-        address masterAddress = unifiedIds[oldUnifiedId].masterAddress;
-
-        bytes memory data = abi.encode(oldUnifiedId, newUnifiedId);
-        uint256 currentNonce = nonces[oldUnifiedId];
+    MotherContractHelpers.UnifiedID storage oldData = unifiedIds[oldUnifiedId];
+    MotherContractHelpers.UnifiedID storage newData = unifiedIds[newUnifiedId];
+    
+    // Copy basic fields
+    newData.masterAddress = oldData.masterAddress;
+    newData.exists = true;
+    
+    // Copy registered chain IDs
+    uint256[] memory chainIds = oldData.registeredChainIds;
+    for (uint256 i = 0; i < chainIds.length; i++) {
+        newData.registeredChainIds.push(chainIds[i]);
         
-        if (!util.verifySignature(abi.encodePacked(data, currentNonce), masterAddress, signature)) revert E23();
-
-        // Update nonce
-        nonces[newUnifiedId] = nonces[oldUnifiedId] + 1;
-        delete nonces[oldUnifiedId];
-
-        _transferUnifiedIdData(oldUnifiedId, newUnifiedId);
-        _cleanupOldUnifiedId(oldUnifiedId, newUnifiedId);
+        // Copy chain data for each chain
+        uint256 chainId = chainIds[i];
+        MotherContractHelpers.ChainData storage oldChainData = oldData.chains[chainId];
+        MotherContractHelpers.ChainData storage newChainData = newData.chains[chainId];
+        
+        newChainData.primary = oldChainData.primary;
+        newChainData.exists = oldChainData.exists;
+        
+        // Copy secondary addresses
+        for (uint256 j = 0; j < oldChainData.secondaries.length; j++) {
+            newChainData.secondaries.push(oldChainData.secondaries[j]);
+        }
     }
+    
+    // Update nonce for new UnifiedId
+    nonces[newUnifiedId] = currentNonce + 1;
+    
+    // Clean up old data
+    delete unifiedIds[oldUnifiedId];
+    delete nonces[oldUnifiedId];
+    
+    // Mark old UnifiedId as unavailable to prevent reuse
+    isUnavailableUnifiedId[oldUnifiedId] = true;
+    
+    // Emit event
+    emit MotherContractEvents.UnifiedIdUpdated(
+        masterAddress, 
+        oldUnifiedId, 
+        newUnifiedId, 
+        block.timestamp
+    );
+}
 
     function _transferUnifiedIdData(string memory oldUnifiedId, string memory newUnifiedId) internal {
         MotherContractHelpers.UnifiedID storage existing = unifiedIds[oldUnifiedId];
