@@ -226,6 +226,8 @@ contract RegistrarStorageChildEvents is Initializable, UUPSUpgradeable, AccessCo
         string unifiedId
     );
 
+    event PrimaryAddressUpdated(address indexed oldPrimary, address indexed newPrimaryAddress, string unifiedId);
+    
     // === ADMIN EVENTS ===
     
     event MaxSecondaryAddressesUpdated(uint256 oldMax, uint256 newMax);
@@ -588,7 +590,7 @@ function completeUpdateUnifiedId(
         resolver.updateUnifiedIdPrimaryAddress(_unifiedId, chainId, _newPrimaryAddress);
     }
 
-    emit UnifiedIDUpdated(oldPrimary, _newPrimaryAddress, _unifiedId);
+    emit PrimaryAddressUpdated(oldPrimary, _newPrimaryAddress, _unifiedId);
     return true;
 }
 
